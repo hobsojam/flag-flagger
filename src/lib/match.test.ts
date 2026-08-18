@@ -42,4 +42,25 @@ describe('isCorrectGuess', () => {
   it('rejects an empty guess', () => {
     expect(isCorrectGuess('   ', makeCountry('Germany'))).toBe(false)
   })
+
+  it('forgives a single typo in a mid-length name', () => {
+    expect(isCorrectGuess('Jermany', makeCountry('Germany'))).toBe(true)
+  })
+
+  it('forgives up to two typos in a long name', () => {
+    // "kyrgzystan" vs "kyrgyzstan": the y/z pair is transposed, which costs
+    // 2 substitutions under plain Levenshtein — exactly at budget for a
+    // 10-letter name.
+    expect(isCorrectGuess('Kyrgzystan', makeCountry('Kyrgyzstan'))).toBe(true)
+  })
+
+  it('rejects a guess that exceeds the typo budget for its length', () => {
+    // "portugal" (8 letters, budget 2) vs "xyztugal": first 3 letters
+    // substituted, rest identical — exactly 3 edits, one over budget.
+    expect(isCorrectGuess('Xyztugal', makeCountry('Portugal'))).toBe(false)
+  })
+
+  it('requires an exact match for short names/aliases', () => {
+    expect(isCorrectGuess('UD', makeCountry('United States', ['USA', 'US']))).toBe(false)
+  })
 })
