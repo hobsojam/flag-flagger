@@ -9,10 +9,12 @@ import { filterByFocus, formatLayoutLabel } from './domain/focus'
 import { summarizeSession } from './domain/session'
 import { useProgress, type SelectionMode } from './hooks/useProgress'
 import { DEFAULT_SESSION_LENGTH, useSession } from './hooks/useSession'
+import { useSoundPreference } from './hooks/useSoundPreference'
 import { useStats } from './hooks/useStats'
 import { isCorrectGuess } from './lib/match'
 import { prefetchFlagAssets } from './lib/prefetchFlags'
 import { buildQuestion, type Question } from './lib/quiz'
+import { playCorrectSound, playIncorrectSound } from './lib/sound'
 
 type Choice = { code: string; isCorrect: boolean } | null
 type View = 'quiz' | 'progress' | 'lookup'
@@ -41,6 +43,7 @@ function App() {
   const [sessionConfig, setSessionConfig] = useState<SessionConfig>(DEFAULT_SESSION_CONFIG)
   const { stats, recordAnswer: recordStats, reset } = useStats()
   const session = useSession()
+  const [soundEnabled, setSoundEnabled] = useSoundPreference()
 
   const accuracy =
     stats.answered === 0 ? 0 : Math.round((stats.correct / stats.answered) * 100)
@@ -53,10 +56,17 @@ function App() {
     schedule(prefetchFlagAssets)
   }, [])
 
+  function playFeedbackSound(isCorrect: boolean) {
+    if (!soundEnabled) return
+    if (isCorrect) playCorrectSound()
+    else playIncorrectSound()
+  }
+
   function handleAnswer(code: string) {
     if (choice) return // already answered this question
     const isCorrect = code === question.answer.code
     setChoice({ code, isCorrect })
+    playFeedbackSound(isCorrect)
     recordStats(isCorrect)
     recordProgress(question.answer.id, isCorrect)
     if (session.active) session.recordAnswer(question.answer.id, isCorrect)
@@ -67,6 +77,7 @@ function App() {
     if (choice || !guess.trim()) return
     const isCorrect = isCorrectGuess(guess, question.answer)
     setChoice({ code: question.answer.code, isCorrect })
+    playFeedbackSound(isCorrect)
     recordStats(isCorrect)
     recordProgress(question.answer.id, isCorrect)
     if (session.active) session.recordAnswer(question.answer.id, isCorrect)
@@ -310,6 +321,13 @@ function App() {
               Back to quiz
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setSoundEnabled((prev) => !prev)}
+            className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+          >
+            {soundEnabled ? 'Sound: On' : 'Sound: Off'}
+          </button>
           <button
             onClick={reset}
             className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
