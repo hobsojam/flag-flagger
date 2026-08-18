@@ -371,3 +371,21 @@ test('flag lookup only surfaces historical entries once enabled', async ({ page 
   await page.getByLabel('Search countries').fill('soviet union')
   await expect(page.locator('div.grid > button')).toHaveCount(1)
 })
+
+test('downloads a progress report as a standalone HTML file', async ({ page }) => {
+  await page.locator('div.grid > button').first().click() // give it at least one answer
+  await page.getByRole('button', { name: 'View progress' }).click()
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download report' }).click(),
+  ])
+
+  expect(download.suggestedFilename()).toMatch(/^flag-flagger-report-\d{4}-\d{2}-\d{2}\.html$/)
+  const stream = await download.createReadStream()
+  const chunks: Buffer[] = []
+  for await (const chunk of stream) chunks.push(chunk)
+  const html = Buffer.concat(chunks).toString('utf-8')
+  expect(html).toContain('<!doctype html>')
+  expect(html).toContain('Flag Flagger — Progress Report')
+})
