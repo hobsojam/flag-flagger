@@ -11,6 +11,8 @@ function makeCountry(overrides: Partial<Country> & { code: string }): Country {
     colorCount: 3,
     layout: 'other',
     areaKm2: 100,
+    flagRatioW: 3,
+    flagRatioH: 2,
     ...overrides,
   }
 }

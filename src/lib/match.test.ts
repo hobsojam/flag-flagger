@@ -12,6 +12,8 @@ function makeCountry(name: string, aliases?: string[]): Country {
     colorCount: 3,
     layout: 'other',
     areaKm2: 100,
+    flagRatioW: 3,
+    flagRatioH: 2,
     aliases,
   }
 }

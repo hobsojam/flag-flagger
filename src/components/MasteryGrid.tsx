@@ -17,7 +17,7 @@ export function MasteryGrid({ progress }: MasteryGridProps) {
   const now = Date.now()
 
   return (
-    <div className="grid w-full grid-cols-6 gap-2 sm:grid-cols-8">
+    <div className="grid w-full grid-cols-6 items-start gap-2 sm:grid-cols-8">
       {countries.map((country) => {
         const record = progress[country.id] ?? createRecord(country.id)
         const confidence = effectiveConfidence(record, now)
