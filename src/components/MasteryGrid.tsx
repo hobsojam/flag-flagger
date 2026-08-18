@@ -19,7 +19,7 @@ export function MasteryGrid({ progress }: MasteryGridProps) {
   return (
     <div className="grid w-full grid-cols-6 gap-2 sm:grid-cols-8">
       {countries.map((country) => {
-        const record = progress[country.code] ?? createRecord(country.code)
+        const record = progress[country.id] ?? createRecord(country.id)
         const confidence = effectiveConfidence(record, now)
         const status =
           record.seen === 0 ? 'not seen yet' : `${Math.round(confidence * 100)}% confidence`
