@@ -59,10 +59,12 @@ console.log('Dimensions:', `${info.width} x ${info.height}`)
 
 const svgRes = await fetch(info.url, { headers: { 'User-Agent': USER_AGENT } })
 const svgBody = await svgRes.text()
-const outPath = path.resolve(OUT_DIR, `${code}.svg`)
-// Defense in depth alongside CODE_PATTERN above: refuse to write outside
-// OUT_DIR even if some future change loosens that pattern.
-if (!outPath.startsWith(OUT_DIR + path.sep)) {
+// path.basename() strips any directory separators/traversal segments CLI
+// input could contain, on top of the CODE_PATTERN check above — belt and
+// suspenders against writing outside OUT_DIR.
+const safeFileName = path.basename(`${code}.svg`)
+const outPath = path.resolve(OUT_DIR, safeFileName)
+if (path.dirname(outPath) !== OUT_DIR) {
   console.error(`Refusing to write outside ${OUT_DIR}: ${outPath}`)
   process.exit(1)
 }
