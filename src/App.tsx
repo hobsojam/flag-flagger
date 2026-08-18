@@ -2,11 +2,13 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Flag } from './components/Flag'
 import { FlagLookup } from './components/FlagLookup'
 import { MasteryGrid } from './components/MasteryGrid'
+import { SessionSetup, type SessionConfig } from './components/SessionSetup'
 import { SessionSummary } from './components/SessionSummary'
 import { countries } from './data/countries'
+import { filterByFocus, formatLayoutLabel } from './domain/focus'
 import { summarizeSession } from './domain/session'
 import { useProgress, type SelectionMode } from './hooks/useProgress'
-import { SESSION_LENGTH, useSession } from './hooks/useSession'
+import { DEFAULT_SESSION_LENGTH, useSession } from './hooks/useSession'
 import { useStats } from './hooks/useStats'
 import { isCorrectGuess } from './lib/match'
 import { prefetchFlagAssets } from './lib/prefetchFlags'
@@ -16,6 +18,12 @@ type Choice = { code: string; isCorrect: boolean } | null
 type View = 'quiz' | 'progress' | 'lookup'
 type RenderMode = 'flag-to-name' | 'name-to-flag'
 type InputMode = 'multiple-choice' | 'typed'
+
+const DEFAULT_SESSION_CONFIG: SessionConfig = {
+  length: DEFAULT_SESSION_LENGTH,
+  focus: null,
+  inputMode: 'multiple-choice',
+}
 
 function App() {
   const { progress, nextFlag, recordAnswer: recordProgress } = useProgress()
@@ -29,6 +37,8 @@ function App() {
   const [inputMode, setInputMode] = useState<InputMode>('multiple-choice')
   const [guess, setGuess] = useState('')
   const [showSummary, setShowSummary] = useState(false)
+  const [showSessionSetup, setShowSessionSetup] = useState(false)
+  const [sessionConfig, setSessionConfig] = useState<SessionConfig>(DEFAULT_SESSION_CONFIG)
   const { stats, recordAnswer: recordStats, reset } = useStats()
   const session = useSession()
 
@@ -62,6 +72,10 @@ function App() {
     if (session.active) session.recordAnswer(question.answer.id, isCorrect)
   }
 
+  function sessionPool() {
+    return session.active ? filterByFocus(countries, sessionConfig.focus) : countries
+  }
+
   function handleNext(nextSelectionMode: SelectionMode = selectionMode) {
     // The 10th answer already made session.isComplete true, but the user
     // hasn't seen the summary yet — reveal it now instead of fetching
@@ -73,7 +87,7 @@ function App() {
     }
     setChoice(null)
     setGuess('')
-    setQuestion(buildQuestion(nextFlag(nextSelectionMode)))
+    setQuestion(buildQuestion(nextFlag(nextSelectionMode, sessionPool())))
   }
 
   function toggleSelectionMode() {
@@ -82,12 +96,15 @@ function App() {
     handleNext(next)
   }
 
-  function startSession() {
-    session.start()
+  function startSession(config: SessionConfig = sessionConfig) {
+    setSessionConfig(config)
+    setInputMode(config.inputMode)
+    setShowSessionSetup(false)
+    session.start(config.length)
     setShowSummary(false)
     setChoice(null)
     setGuess('')
-    setQuestion(buildQuestion(nextFlag(selectionMode)))
+    setQuestion(buildQuestion(nextFlag(selectionMode, filterByFocus(countries, config.focus))))
   }
 
   function endSession() {
@@ -123,11 +140,20 @@ function App() {
   function renderMainView() {
     if (view === 'progress') return <MasteryGrid progress={progress} />
     if (view === 'lookup') return <FlagLookup />
+    if (showSessionSetup) {
+      return (
+        <SessionSetup
+          defaultConfig={sessionConfig}
+          onStart={startSession}
+          onCancel={() => setShowSessionSetup(false)}
+        />
+      )
+    }
     if (showSummary) {
       return (
         <SessionSummary
           summary={summarizeSession(session.answers, countries)}
-          onPlayAgain={startSession}
+          onPlayAgain={() => startSession()}
           onEndSession={endSession}
         />
       )
@@ -241,7 +267,11 @@ function App() {
         <h1 className="whitespace-nowrap text-xl font-semibold sm:text-2xl">Flag Flagger</h1>
         <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
           <button
-            onClick={() => (session.active ? endSession() : startSession())}
+            onClick={() => {
+              setView('quiz')
+              if (session.active) endSession()
+              else setShowSessionSetup(true)
+            }}
             className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
           >
             {session.active ? 'End session' : 'Start session'}
@@ -288,14 +318,24 @@ function App() {
       </header>
 
       <main className="flex w-full flex-col items-center gap-6">
-        {view === 'quiz' && (
+        {view === 'quiz' && !showSessionSetup && (
           <>
             {selectionMode === 'weak' && (
               <p className="-mt-4 text-sm text-gray-500">Practicing your weakest flags only.</p>
             )}
             {session.active && (
               <p className="-mt-4 text-sm text-gray-500">
-                Session: {session.answers.length}/{SESSION_LENGTH}
+                Session: {session.answers.length}/{session.length}
+                {sessionConfig.focus && (
+                  <>
+                    {' · '}
+                    <span className="capitalize">
+                      {sessionConfig.focus.type === 'layout'
+                        ? formatLayoutLabel(sessionConfig.focus.value)
+                        : sessionConfig.focus.value}
+                    </span>
+                  </>
+                )}
               </p>
             )}
 

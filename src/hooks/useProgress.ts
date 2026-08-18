@@ -14,12 +14,15 @@ export function useProgress() {
   )
   const recentRef = useRef<string[]>([])
 
-  const nextFlag = useCallback((mode: SelectionMode = 'adaptive'): Country => {
-    const select = mode === 'weak' ? selectWeakFlag : selectNextFlag
-    const flag = select(countries, progress, recentRef.current, Date.now())
-    recentRef.current = [flag.id, ...recentRef.current].slice(0, RECENT_HISTORY)
-    return flag
-  }, [progress])
+  const nextFlag = useCallback(
+    (mode: SelectionMode = 'adaptive', pool: Country[] = countries): Country => {
+      const select = mode === 'weak' ? selectWeakFlag : selectNextFlag
+      const flag = select(pool, progress, recentRef.current, Date.now())
+      recentRef.current = [flag.id, ...recentRef.current].slice(0, RECENT_HISTORY)
+      return flag
+    },
+    [progress],
+  )
 
   const recordAnswer = useCallback((id: string, isCorrect: boolean) => {
     setProgress((prev) => {
