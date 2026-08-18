@@ -23,7 +23,7 @@ export function FlagLookup() {
 
   if (selected) {
     return (
-      <div className="flex w-full flex-col items-center gap-4">
+      <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-4">
         <button
           type="button"
           onClick={() => {
@@ -89,7 +89,7 @@ export function FlagLookup() {
         className="w-full rounded-lg border-2 border-gray-300 px-4 py-2.5 font-medium focus:outline-none dark:border-gray-700 dark:bg-gray-900"
       />
 
-      <div className="grid w-full grid-cols-3 items-start gap-2 sm:grid-cols-4">
+      <div className="grid w-full grid-cols-3 items-start gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
         {filtered.map((country) => (
           <button
             key={country.id}
