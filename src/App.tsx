@@ -11,6 +11,7 @@ import { useProgress, type SelectionMode } from './hooks/useProgress'
 import { DEFAULT_SESSION_LENGTH, useSession } from './hooks/useSession'
 import { useSoundPreference } from './hooks/useSoundPreference'
 import { useStats } from './hooks/useStats'
+import { useStreak } from './hooks/useStreak'
 import { isCorrectGuess } from './lib/match'
 import { prefetchFlagAssets } from './lib/prefetchFlags'
 import { buildQuestion, type Question } from './lib/quiz'
@@ -44,6 +45,7 @@ function App() {
   const { stats, recordAnswer: recordStats, reset } = useStats()
   const session = useSession()
   const [soundEnabled, setSoundEnabled] = useSoundPreference()
+  const { streak, recordPractice } = useStreak()
 
   const accuracy =
     stats.answered === 0 ? 0 : Math.round((stats.correct / stats.answered) * 100)
@@ -69,6 +71,7 @@ function App() {
     playFeedbackSound(isCorrect)
     recordStats(isCorrect)
     recordProgress(question.answer.id, isCorrect)
+    recordPractice()
     if (session.active) session.recordAnswer(question.answer.id, isCorrect)
   }
 
@@ -80,6 +83,7 @@ function App() {
     playFeedbackSound(isCorrect)
     recordStats(isCorrect)
     recordProgress(question.answer.id, isCorrect)
+    recordPractice()
     if (session.active) session.recordAnswer(question.answer.id, isCorrect)
   }
 
@@ -279,7 +283,14 @@ function App() {
   return (
     <div className="mx-auto flex min-h-svh max-w-xl flex-col items-center gap-6 px-4 py-10">
       <header className="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h1 className="whitespace-nowrap text-xl font-semibold sm:text-2xl">Flag Flagger</h1>
+        <div className="flex items-baseline gap-2">
+          <h1 className="whitespace-nowrap text-xl font-semibold sm:text-2xl">Flag Flagger</h1>
+          {streak.currentStreak > 0 && (
+            <span className="whitespace-nowrap text-sm text-gray-500">
+              {streak.currentStreak}-day streak
+            </span>
+          )}
+        </div>
         <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
           <button
             onClick={() => {
