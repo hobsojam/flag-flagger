@@ -1,15 +1,19 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Flag } from './components/Flag'
 import { useProgress } from './hooks/useProgress'
 import { useStats } from './hooks/useStats'
+import { isCorrectGuess } from './lib/match'
 import { buildQuestion, type Question } from './lib/quiz'
 
 type Choice = { code: string; isCorrect: boolean } | null
+type Mode = 'multiple-choice' | 'typed'
 
 function App() {
   const { nextFlag, recordAnswer: recordProgress } = useProgress()
   const [question, setQuestion] = useState<Question>(() => buildQuestion(nextFlag()))
   const [choice, setChoice] = useState<Choice>(null)
+  const [mode, setMode] = useState<Mode>('multiple-choice')
+  const [guess, setGuess] = useState('')
   const { stats, recordAnswer: recordStats, reset } = useStats()
 
   const accuracy =
@@ -23,9 +27,25 @@ function App() {
     recordProgress(question.answer.code, isCorrect)
   }
 
+  function handleGuessSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (choice || !guess.trim()) return
+    const isCorrect = isCorrectGuess(guess, question.answer)
+    setChoice({ code: question.answer.code, isCorrect })
+    recordStats(isCorrect)
+    recordProgress(question.answer.code, isCorrect)
+  }
+
   function handleNext() {
     setChoice(null)
+    setGuess('')
     setQuestion(buildQuestion(nextFlag()))
+  }
+
+  function handleModeChange(next: Mode) {
+    setMode(next)
+    setChoice(null)
+    setGuess('')
   }
 
   return (
@@ -47,39 +67,81 @@ function App() {
         <Stat label="Best" value={stats.bestStreak} />
       </dl>
 
+      <div className="flex gap-2">
+        <ModeButton active={mode === 'multiple-choice'} onClick={() => handleModeChange('multiple-choice')}>
+          Multiple choice
+        </ModeButton>
+        <ModeButton active={mode === 'typed'} onClick={() => handleModeChange('typed')}>
+          Type the answer
+        </ModeButton>
+      </div>
+
       <div className="w-full">
         <Flag code={question.answer.code} label="Which country is this?" />
       </div>
 
-      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
-        {question.options.map((option) => {
-          const isSelected = choice?.code === option.code
-          const isAnswer = choice && option.code === question.answer.code
+      {mode === 'multiple-choice' ? (
+        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+          {question.options.map((option) => {
+            const isSelected = choice?.code === option.code
+            const isAnswer = choice && option.code === question.answer.code
 
-          let style =
-            'border-gray-300 bg-white hover:border-gray-400 dark:bg-gray-900 dark:border-gray-700'
-          if (choice) {
-            if (isAnswer) {
-              style = 'border-green-500 bg-green-50 dark:bg-green-950'
-            } else if (isSelected) {
-              style = 'border-red-500 bg-red-50 dark:bg-red-950'
-            } else {
-              style = 'border-gray-200 opacity-60 dark:border-gray-800'
+            let style =
+              'border-gray-300 bg-white hover:border-gray-400 dark:bg-gray-900 dark:border-gray-700'
+            if (choice) {
+              if (isAnswer) {
+                style = 'border-green-500 bg-green-50 dark:bg-green-950'
+              } else if (isSelected) {
+                style = 'border-red-500 bg-red-50 dark:bg-red-950'
+              } else {
+                style = 'border-gray-200 opacity-60 dark:border-gray-800'
+              }
             }
-          }
 
-          return (
+            return (
+              <button
+                key={option.code}
+                onClick={() => handleAnswer(option.code)}
+                disabled={!!choice}
+                className={`rounded-lg border-2 px-4 py-3 text-left font-medium transition-colors ${style}`}
+              >
+                {option.name}
+              </button>
+            )
+          })}
+        </div>
+      ) : (
+        <form onSubmit={handleGuessSubmit} className="flex w-full flex-col gap-3">
+          <input
+            type="text"
+            value={guess}
+            onChange={(e) => setGuess(e.target.value)}
+            disabled={!!choice}
+            autoFocus
+            placeholder="Type the country name..."
+            className={`w-full rounded-lg border-2 px-4 py-3 font-medium transition-colors focus:outline-none ${
+              choice
+                ? choice.isCorrect
+                  ? 'border-green-500 bg-green-50 dark:bg-green-950'
+                  : 'border-red-500 bg-red-50 dark:bg-red-950'
+                : 'border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700'
+            }`}
+          />
+          {choice && !choice.isCorrect && (
+            <p className="text-sm text-gray-500">
+              Correct answer: <span className="font-medium">{question.answer.name}</span>
+            </p>
+          )}
+          {!choice && (
             <button
-              key={option.code}
-              onClick={() => handleAnswer(option.code)}
-              disabled={!!choice}
-              className={`rounded-lg border-2 px-4 py-3 text-left font-medium transition-colors ${style}`}
+              type="submit"
+              className="rounded-lg bg-gray-900 px-6 py-2 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
             >
-              {option.name}
+              Submit
             </button>
-          )
-        })}
-      </div>
+          )}
+        </form>
+      )}
 
       <div className="h-10">
         {choice && (
@@ -93,6 +155,29 @@ function App() {
         )}
       </div>
     </div>
+  )
+}
+
+function ModeButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: string
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+        active
+          ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+      }`}
+    >
+      {children}
+    </button>
   )
 }
 
