@@ -75,3 +75,32 @@ test('reset stats zeroes the counters', async ({ page }) => {
   await page.getByRole('button', { name: 'Reset stats' }).click()
   await expect(page.getByText('Answered').locator('..')).toContainText('0')
 })
+
+test('completes a 10-flag session and shows a summary', async ({ page }) => {
+  await page.getByRole('button', { name: 'Start 10-flag session' }).click()
+  await expect(page.getByText('Session: 0/10')).toBeVisible()
+
+  for (let i = 0; i < 10; i++) {
+    await page.locator('div.grid > button').first().click()
+    // Label switches to "See summary" on the 10th question — target the
+    // wrapper instead of the exact text so this works for every iteration.
+    await page.locator('div.h-10 button').click()
+  }
+
+  await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible()
+  await expect(page.getByText(/\d+\/10 correct/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Play again' }).click()
+  await expect(page.getByText('Session: 0/10')).toBeVisible()
+})
+
+test('ending a session returns to normal practice', async ({ page }) => {
+  await page.getByRole('button', { name: 'Start 10-flag session' }).click()
+  await page.locator('div.grid > button').first().click()
+  await page.getByRole('button', { name: 'Next flag →' }).click()
+  await expect(page.getByText('Session: 1/10')).toBeVisible()
+
+  await page.getByRole('button', { name: 'End session' }).click()
+  await expect(page.getByRole('button', { name: 'Start 10-flag session' })).toBeVisible()
+  await expect(page.getByText(/Session: \d+\/10/)).not.toBeVisible()
+})

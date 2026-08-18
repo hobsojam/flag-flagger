@@ -1,7 +1,11 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Flag } from './components/Flag'
 import { MasteryGrid } from './components/MasteryGrid'
+import { SessionSummary } from './components/SessionSummary'
+import { countries } from './data/countries'
+import { summarizeSession } from './domain/session'
 import { useProgress, type SelectionMode } from './hooks/useProgress'
+import { SESSION_LENGTH, useSession } from './hooks/useSession'
 import { useStats } from './hooks/useStats'
 import { isCorrectGuess } from './lib/match'
 import { buildQuestion, type Question } from './lib/quiz'
@@ -22,7 +26,9 @@ function App() {
   const [renderMode, setRenderMode] = useState<RenderMode>('flag-to-name')
   const [inputMode, setInputMode] = useState<InputMode>('multiple-choice')
   const [guess, setGuess] = useState('')
+  const [showSummary, setShowSummary] = useState(false)
   const { stats, recordAnswer: recordStats, reset } = useStats()
+  const session = useSession()
 
   const accuracy =
     stats.answered === 0 ? 0 : Math.round((stats.correct / stats.answered) * 100)
@@ -33,6 +39,7 @@ function App() {
     setChoice({ code, isCorrect })
     recordStats(isCorrect)
     recordProgress(question.answer.id, isCorrect)
+    if (session.active) session.recordAnswer(question.answer.id, isCorrect)
   }
 
   function handleGuessSubmit(e: FormEvent) {
@@ -42,9 +49,18 @@ function App() {
     setChoice({ code: question.answer.code, isCorrect })
     recordStats(isCorrect)
     recordProgress(question.answer.id, isCorrect)
+    if (session.active) session.recordAnswer(question.answer.id, isCorrect)
   }
 
   function handleNext(nextSelectionMode: SelectionMode = selectionMode) {
+    // The 10th answer already made session.isComplete true, but the user
+    // hasn't seen the summary yet — reveal it now instead of fetching
+    // another question, so the feedback for that last flag stays visible
+    // until they choose to move on.
+    if (session.isComplete) {
+      setShowSummary(true)
+      return
+    }
     setChoice(null)
     setGuess('')
     setQuestion(buildQuestion(nextFlag(nextSelectionMode)))
@@ -54,6 +70,22 @@ function App() {
     const next: SelectionMode = selectionMode === 'adaptive' ? 'weak' : 'adaptive'
     setSelectionMode(next)
     handleNext(next)
+  }
+
+  function startSession() {
+    session.start()
+    setShowSummary(false)
+    setChoice(null)
+    setGuess('')
+    setQuestion(buildQuestion(nextFlag(selectionMode)))
+  }
+
+  function endSession() {
+    session.stop()
+    setShowSummary(false)
+    setChoice(null)
+    setGuess('')
+    setQuestion(buildQuestion(nextFlag(selectionMode)))
   }
 
   function handleRenderModeChange(next: RenderMode) {
@@ -77,6 +109,12 @@ function App() {
       <header className="flex w-full items-center justify-between">
         <h1 className="text-2xl font-semibold">Flag Flagger</h1>
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => (session.active ? endSession() : startSession())}
+            className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+          >
+            {session.active ? 'End session' : 'Start 10-flag session'}
+          </button>
           <button
             onClick={toggleSelectionMode}
             className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
@@ -102,6 +140,11 @@ function App() {
         <>
           {selectionMode === 'weak' && (
             <p className="-mt-4 text-sm text-gray-500">Practicing your weakest flags only.</p>
+          )}
+          {session.active && (
+            <p className="-mt-4 text-sm text-gray-500">
+              Session: {session.answers.length}/{SESSION_LENGTH}
+            </p>
           )}
 
           <div className="flex flex-wrap justify-center gap-2">
@@ -146,6 +189,12 @@ function App() {
 
       {view === 'progress' ? (
         <MasteryGrid progress={progress} />
+      ) : showSummary ? (
+        <SessionSummary
+          summary={summarizeSession(session.answers, countries)}
+          onPlayAgain={startSession}
+          onEndSession={endSession}
+        />
       ) : (
         <>
           {renderMode === 'flag-to-name' ? (
@@ -232,7 +281,7 @@ function App() {
                 autoFocus
                 className="rounded-lg bg-gray-900 px-6 py-2 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
               >
-                Next flag →
+                {session.isComplete ? 'See summary' : 'Next flag →'}
               </button>
             )}
           </div>
