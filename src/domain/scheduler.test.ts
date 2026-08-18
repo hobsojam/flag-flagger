@@ -5,6 +5,8 @@ import { selectNextFlag } from './scheduler'
 
 function makeCountry(code: string, name = code): Country {
   return {
+    id: `country:${code}`,
+    category: 'country',
     code,
     name,
     continent: 'Europe',
@@ -19,28 +21,32 @@ const countries = [makeCountry('de'), makeCountry('fr'), makeCountry('it')]
 describe('selectNextFlag', () => {
   it('picks a country from the given list', () => {
     const picked = selectNextFlag(countries, {}, [], 0)
-    expect(countries.map((c) => c.code)).toContain(picked.code)
+    expect(countries.map((c) => c.id)).toContain(picked.id)
   })
 
   it('excludes recently shown flags when other options exist', () => {
     for (let i = 0; i < 50; i++) {
-      const picked = selectNextFlag(countries, {}, ['de', 'fr'], 0)
-      expect(picked.code).toBe('it')
+      const picked = selectNextFlag(countries, {}, ['country:de', 'country:fr'], 0)
+      expect(picked.id).toBe('country:it')
     }
   })
 
   it('falls back to the full list when everything was recently shown', () => {
-    const allRecent = countries.map((c) => c.code)
+    const allRecent = countries.map((c) => c.id)
     const picked = selectNextFlag(countries, {}, allRecent, 0)
-    expect(countries.map((c) => c.code)).toContain(picked.code)
+    expect(countries.map((c) => c.id)).toContain(picked.id)
   })
 
   it('biases selection toward the lowest-confidence flag', () => {
     const progress: ProgressMap = {}
     // "de" is well known; "fr" and "it" have never been seen.
-    let known = updateRecord({ code: 'de', confidence: 0, lastSeenAt: 0, seen: 0, correct: 0 }, true, 0)
+    let known = updateRecord(
+      { id: 'country:de', confidence: 0, lastSeenAt: 0, seen: 0, correct: 0 },
+      true,
+      0,
+    )
     for (let i = 0; i < 5; i++) known = updateRecord(known, true, 0)
-    progress.de = known
+    progress['country:de'] = known
 
     const counts = { de: 0, fr: 0, it: 0 }
     const trials = 500
