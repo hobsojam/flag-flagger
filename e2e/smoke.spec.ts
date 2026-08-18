@@ -132,3 +132,58 @@ test('mode toggle buttons expose pressed state', async ({ page }) => {
 test('main content is contained in a landmark', async ({ page }) => {
   await expect(page.getByRole('main')).toBeVisible()
 })
+
+test('flag lookup: search, view a flag with its Wikipedia summary, and go back', async ({
+  page,
+}) => {
+  await page.route('https://en.wikipedia.org/api/rest_v1/page/summary/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        extract: 'The flag of Testland is a placeholder used for e2e testing.',
+        content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Flag_of_Testland' } },
+      }),
+    })
+  })
+
+  await page.getByRole('button', { name: 'Flag lookup' }).click()
+  await page.getByLabel('Search countries').fill('germany')
+
+  const results = page.locator('div.grid > button')
+  await expect(results).toHaveCount(1)
+  await results.first().click()
+
+  await expect(page.getByRole('heading', { name: 'Germany' })).toBeVisible()
+  await expect(page.getByText('placeholder used for e2e testing')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Wikipedia' })).toHaveAttribute(
+    'href',
+    'https://en.wikipedia.org/wiki/Flag_of_Testland',
+  )
+  await expect(page.getByRole('link', { name: 'CC BY-SA 4.0' })).toHaveAttribute(
+    'href',
+    'https://creativecommons.org/licenses/by-sa/4.0/',
+  )
+
+  await page.getByRole('button', { name: '← Back to list' }).click()
+  await expect(page.getByLabel('Search countries')).toBeVisible()
+})
+
+test('flag lookup shows a message when the summary fails to load', async ({ page }) => {
+  await page.route('https://en.wikipedia.org/api/rest_v1/page/summary/**', async (route) => {
+    await route.fulfill({ status: 404 })
+  })
+  await page.route('https://en.wikipedia.org/w/api.php**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(['Flag of Germany', []]),
+    })
+  })
+
+  await page.getByRole('button', { name: 'Flag lookup' }).click()
+  await page.getByLabel('Search countries').fill('germany')
+  await page.locator('div.grid > button').first().click()
+
+  await expect(page.getByText("Couldn't load information for this flag.")).toBeVisible()
+})
