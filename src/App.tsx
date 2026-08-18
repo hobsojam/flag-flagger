@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Flag } from './components/Flag'
-import { useProgress } from './hooks/useProgress'
+import { useProgress, type QuizMode } from './hooks/useProgress'
 import { useStats } from './hooks/useStats'
 import { buildQuestion, type Question } from './lib/quiz'
 
@@ -8,7 +8,8 @@ type Choice = { code: string; isCorrect: boolean } | null
 
 function App() {
   const { nextFlag, recordAnswer: recordProgress } = useProgress()
-  const [question, setQuestion] = useState<Question>(() => buildQuestion(nextFlag()))
+  const [mode, setMode] = useState<QuizMode>('adaptive')
+  const [question, setQuestion] = useState<Question>(() => buildQuestion(nextFlag(mode)))
   const [choice, setChoice] = useState<Choice>(null)
   const { stats, recordAnswer: recordStats, reset } = useStats()
 
@@ -23,22 +24,42 @@ function App() {
     recordProgress(question.answer.code, isCorrect)
   }
 
-  function handleNext() {
+  function handleNext(nextMode: QuizMode = mode) {
     setChoice(null)
-    setQuestion(buildQuestion(nextFlag()))
+    setQuestion(buildQuestion(nextFlag(nextMode)))
+  }
+
+  function toggleMode() {
+    const nextMode: QuizMode = mode === 'adaptive' ? 'weak' : 'adaptive'
+    setMode(nextMode)
+    handleNext(nextMode)
   }
 
   return (
     <div className="mx-auto flex min-h-svh max-w-xl flex-col items-center gap-6 px-4 py-10">
       <header className="flex w-full items-center justify-between">
         <h1 className="text-2xl font-semibold">Flag Flagger</h1>
-        <button
-          onClick={reset}
-          className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
-        >
-          Reset stats
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={toggleMode}
+            className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+          >
+            {mode === 'adaptive' ? 'Practice weak flags' : 'Back to normal practice'}
+          </button>
+          <button
+            onClick={reset}
+            className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+          >
+            Reset stats
+          </button>
+        </div>
       </header>
+
+      {mode === 'weak' && (
+        <p className="-mt-4 text-sm text-gray-500">
+          Practicing your weakest flags only.
+        </p>
+      )}
 
       <dl className="grid w-full grid-cols-4 gap-2 text-center">
         <Stat label="Answered" value={stats.answered} />
@@ -84,7 +105,7 @@ function App() {
       <div className="h-10">
         {choice && (
           <button
-            onClick={handleNext}
+            onClick={() => handleNext()}
             autoFocus
             className="rounded-lg bg-gray-900 px-6 py-2 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
           >
