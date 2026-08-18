@@ -77,7 +77,7 @@ test('reset stats zeroes the counters', async ({ page }) => {
 })
 
 test('completes a 10-flag session and shows a summary', async ({ page }) => {
-  await page.getByRole('button', { name: 'Start 10-flag session' }).click()
+  await page.getByRole('button', { name: 'Start session' }).click()
   await expect(page.getByText('Session: 0/10')).toBeVisible()
 
   for (let i = 0; i < 10; i++) {
@@ -95,12 +95,12 @@ test('completes a 10-flag session and shows a summary', async ({ page }) => {
 })
 
 test('ending a session returns to normal practice', async ({ page }) => {
-  await page.getByRole('button', { name: 'Start 10-flag session' }).click()
+  await page.getByRole('button', { name: 'Start session' }).click()
   await page.locator('div.grid > button').first().click()
   await page.getByRole('button', { name: 'Next flag →' }).click()
   await expect(page.getByText('Session: 1/10')).toBeVisible()
 
   await page.getByRole('button', { name: 'End session' }).click()
-  await expect(page.getByRole('button', { name: 'Start 10-flag session' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Start session' })).toBeVisible()
   await expect(page.getByText(/Session: \d+\/10/)).not.toBeVisible()
 })
