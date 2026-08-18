@@ -8,10 +8,9 @@ const OPENSEARCH_BASE = 'https://en.wikipedia.org/w/api.php?action=opensearch&fo
 
 const cache = new Map<string, FlagSummary | null>()
 
-// countryName only ever comes from our own static country list today (never
-// raw user text — the search box filters that list, it doesn't feed this
-// directly), but validating before it's used to build a request URL is
-// cheap and removes any doubt if that ever changes.
+// Guards both the incoming countryName (from our own static country list)
+// and titles resolved via the opensearch fallback (remote, so untrusted)
+// before either is used to build a request URL.
 const SAFE_NAME = /^[\p{L}\p{N} '.,()-]+$/u
 
 async function fetchSummaryForTitle(title: string): Promise<FlagSummary | null> {
@@ -46,7 +45,7 @@ export async function fetchFlagSummary(countryName: string): Promise<FlagSummary
 
   if (!summary) {
     const resolvedTitle = await resolveTitleViaSearch(directTitle)
-    if (resolvedTitle && resolvedTitle !== directTitle) {
+    if (resolvedTitle && resolvedTitle !== directTitle && SAFE_NAME.test(resolvedTitle)) {
       summary = await fetchSummaryForTitle(resolvedTitle)
     }
   }
