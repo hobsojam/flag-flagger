@@ -8,12 +8,10 @@ const OPENSEARCH_BASE = 'https://en.wikipedia.org/w/api.php?action=opensearch&fo
 
 const cache = new Map<string, FlagSummary | null>()
 
-// Guards both the incoming countryName (from our own static country list)
-// and titles resolved via the opensearch fallback (remote, so untrusted)
-// before either is used to build a request URL.
 const SAFE_NAME = /^[\p{L}\p{N} '.,()-]+$/u
 
 async function fetchSummaryForTitle(title: string): Promise<FlagSummary | null> {
+  if (!SAFE_NAME.test(title)) return null
   const res = await fetch(REST_BASE + encodeURIComponent(title))
   if (!res.ok) return null
   const data = await res.json()
@@ -45,7 +43,7 @@ export async function fetchFlagSummary(countryName: string): Promise<FlagSummary
 
   if (!summary) {
     const resolvedTitle = await resolveTitleViaSearch(directTitle)
-    if (resolvedTitle && resolvedTitle !== directTitle && SAFE_NAME.test(resolvedTitle)) {
+    if (resolvedTitle && resolvedTitle !== directTitle) {
       summary = await fetchSummaryForTitle(resolvedTitle)
     }
   }
