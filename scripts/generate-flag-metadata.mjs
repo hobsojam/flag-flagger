@@ -271,6 +271,46 @@ const MANUAL_LAYOUT = {
   vu: 'other', // pall (Y-shape); SVG draws it via stroke, geometry parser misses it
 }
 
+// Hand-curated alternate names accepted by typed-answer matching (see
+// src/lib/match.ts). Not derivable from the SVG or the area dataset, so it
+// lives here rather than being computed — keeping it in the generator (like
+// MANUAL_LAYOUT) instead of a separate one-off script means a full
+// regenerate can't silently wipe it out again.
+const ALIASES = {
+  cv: ['Cape Verde'],
+  cd: ['Democratic Republic of the Congo', 'DRC', 'Congo-Kinshasa'],
+  ci: ['Ivory Coast'],
+  cz: ['Czech Republic'],
+  sz: ['Swaziland'],
+  mk: ['Macedonia'],
+  tl: ['East Timor'],
+  ae: ['UAE'],
+  gb: ['UK', 'Great Britain'],
+  us: ['USA', 'US', 'United States of America'],
+  va: ['Holy See'],
+  mm: ['Burma'],
+  nl: ['Holland'],
+  tr: ['Turkiye', 'Türkiye'],
+  kp: ['DPRK', "Democratic People's Republic of Korea"],
+  kr: ['Korea', 'Republic of Korea'],
+  ba: ['Bosnia'],
+  kn: ['St Kitts and Nevis', 'St. Kitts and Nevis', 'St Kitts'],
+  lc: ['St Lucia', 'St. Lucia'],
+  vc: ['St Vincent and the Grenadines', 'St Vincent', 'St. Vincent'],
+  tt: ['Trinidad'],
+  ag: ['Antigua'],
+  pg: ['PNG'],
+  fm: ['Federated States of Micronesia', 'FSM'],
+  bn: ['Brunei Darussalam'],
+  cg: ['Republic of the Congo', 'Congo-Brazzaville'],
+  la: ['Lao PDR'],
+  ir: ['Islamic Republic of Iran'],
+  sy: ['Syrian Arab Republic'],
+  ru: ['Russian Federation'],
+  md: ['Republic of Moldova'],
+  tz: ['United Republic of Tanzania'],
+}
+
 const CONTINENT_BY_REGION = {
   Africa: 'Africa',
   Asia: 'Asia',
@@ -364,11 +404,17 @@ function subpathBoxes(d) {
     }
 
     if (cmd === 'A' || cmd === 'a') {
-      // rx ry x-rot large-arc sweep x y — only the trailing x,y is a point.
+      // rx ry x-rot large-arc sweep x y. The true extent needs solving the
+      // ellipse equation — not worth it here, colorCount only needs to be
+      // roughly right. Padding the endpoint by the radii is enough to stop
+      // near-complete circles (start ≈ end point) collapsing to ~zero area.
       for (let i = 0; i + 6 < args.length + 1; i += 7) {
+        const rx = args[i]
+        const ry = args[i + 1]
         cx = rel ? cx + args[i + 5] : args[i + 5]
         cy = rel ? cy + args[i + 6] : args[i + 6]
-        extend(cx, cy)
+        extend(cx - rx, cy - ry)
+        extend(cx + rx, cy + ry)
       }
       continue
     }
@@ -420,83 +466,127 @@ function detectLayout(svg) {
 
 const CANVAS_AREA = 640 * 480
 
+// Resolves the area multiplier from a transform's scale/matrix component.
+// Rotate/translate don't change area; skew and anything else we don't
+// bother modeling — colorCount only needs to be roughly right.
+function transformScale(transformStr) {
+  if (!transformStr) return 1
+  const matrixMatch = transformStr.match(
+    /matrix\(\s*([\d.-]+)[ ,]+([\d.-]+)[ ,]+([\d.-]+)[ ,]+([\d.-]+)/,
+  )
+  if (matrixMatch) {
+    const [, a, b, c, d] = matrixMatch.map(Number)
+    return Math.abs(a * d - b * c)
+  }
+  const scaleMatch = transformStr.match(/scale\(\s*([\d.-]+)(?:[ ,]+([\d.-]+))?/)
+  if (scaleMatch) {
+    const sx = Number(scaleMatch[1])
+    const sy = scaleMatch[2] !== undefined ? Number(scaleMatch[2]) : sx
+    return Math.abs(sx * sy)
+  }
+  return 1
+}
+
+function parseAttrs(attrsStr) {
+  const attrs = {}
+  for (const m of attrsStr.matchAll(/([\w:-]+)="([^"]*)"/g)) attrs[m[1]] = m[2]
+  return attrs
+}
+
 // Raw distinct fill() values wildly overcount flags with detailed emblems —
 // Mexico's coat of arms alone uses 60+ shading colors in the SVG, which
 // isn't what "how many colors is this flag" means to a quiz taker. Instead,
 // sum each color's total shape area and only count colors that cover a
 // visually meaningful fraction of the flag, so fine emblem shading drops
 // out but genuine field/stripe/canton colors survive.
+//
+// This walks tags in document order tracking two things ancestor <g>
+// elements commonly carry that a flat per-tag scan misses entirely:
+// inherited fill (e.g. Switzerland's cross is two <path>s with no fill of
+// their own inside <g fill="#fff">) and cumulative transform scale (e.g.
+// South Korea's trigrams are scaled by an ancestor <g transform=scale(...)>,
+// not the <use> element itself). <defs>/<clipPath> subtrees are tracked
+// but not counted directly — their contents are template geometry, only
+// real once referenced by a <use>.
 function countColors(svg) {
   const areaByColor = new Map()
   const add = (fill, area) => {
+    if (!fill) return
     const value = fill.toLowerCase()
     if (value === 'none') return
     areaByColor.set(value, (areaByColor.get(value) ?? 0) + area)
   }
 
   const pathsById = new Map()
+  const stack = [{ fill: undefined, scale: 1, hidden: false }]
+  const top = () => stack[stack.length - 1]
 
-  for (const pathMatch of svg.matchAll(/<path\b([^>]*)\/?>/g)) {
-    const attrs = pathMatch[1]
-    const dMatch = attrs.match(/\bd="([^"]+)"/)
-    if (!dMatch) continue
-    const boxes = subpathBoxes(dMatch[1])
-    const rawArea = boxes.reduce((sum, b) => sum + b.w * b.h, 0)
+  const tagRe = /<(\/?)([\w:]+)((?:\s+[\w:-]+="[^"]*")*)\s*(\/?)>/g
+  let match
+  while ((match = tagRe.exec(svg))) {
+    const [, closing, rawTag, attrsStr, selfClose] = match
+    const tag = rawTag.replace(/^svg:/, '')
+    const tagLower = tag.toLowerCase()
+    const isContainer = tagLower === 'g' || tagLower === 'defs' || tagLower === 'clippath'
 
-    // A stroked line (e.g. the US flag's stripes) has ~zero geometric area
-    // of its own — the stroke-width is what makes it visually thick.
-    const strokeWidthMatch = attrs.match(/\bstroke-width="([\d.]+)"/)
-    const strokeWidth = strokeWidthMatch ? Number(strokeWidthMatch[1]) : 0
-    const strokeArea = boxes.reduce(
-      (sum, b) => sum + (b.w + strokeWidth) * (b.h + strokeWidth),
-      0,
-    )
-
-    const fillMatch = attrs.match(/\bfill="([^"]+)"/)
-    if (fillMatch) add(fillMatch[1], rawArea)
-    const strokeMatch = attrs.match(/\bstroke="([^"]+)"/)
-    if (strokeMatch) add(strokeMatch[1], strokeArea)
-
-    const idMatch = attrs.match(/\bid="([^"]+)"/)
-    if (idMatch) pathsById.set(idMatch[1], { fill: fillMatch?.[1], rawArea })
-  }
-
-  for (const circleMatch of svg.matchAll(/<circle\b([^>]*)\/?>/g)) {
-    const attrs = circleMatch[1]
-    const fillMatch = attrs.match(/\bfill="([^"]+)"/)
-    const rMatch = attrs.match(/\br="([\d.]+)"/)
-    if (!fillMatch || !rMatch) continue
-    add(fillMatch[1], Math.PI * Number(rMatch[1]) ** 2)
-  }
-
-  // <use> instances (e.g. China/Vanuatu's repeated stars) reference a
-  // template path defined once at its native (often tiny) size, then scale
-  // it up via a transform matrix — resolve that scale to get real area.
-  for (const useMatch of svg.matchAll(/<use\b([^>]*)\/?>/g)) {
-    const attrs = useMatch[1]
-    const hrefMatch = attrs.match(/(?:xlink:href|href)="#([^"]+)"/)
-    const template = hrefMatch && pathsById.get(hrefMatch[1])
-    if (!template) continue
-
-    const fillMatch = attrs.match(/\bfill="([^"]+)"/)
-    const fill = fillMatch?.[1] ?? template.fill
-    if (!fill) continue
-
-    const matrixMatch = attrs.match(
-      /matrix\(\s*([\d.-]+)[ ,]+([\d.-]+)[ ,]+([\d.-]+)[ ,]+([\d.-]+)/,
-    )
-    const scaleMatch = attrs.match(/scale\(\s*([\d.-]+)(?:[ ,]+([\d.-]+))?/)
-    let areaScale = 1
-    if (matrixMatch) {
-      const [, a, b, c, d] = matrixMatch.map(Number)
-      areaScale = Math.abs(a * d - b * c)
-    } else if (scaleMatch) {
-      const sx = Number(scaleMatch[1])
-      const sy = scaleMatch[2] !== undefined ? Number(scaleMatch[2]) : sx
-      areaScale = Math.abs(sx * sy)
+    if (closing) {
+      if (isContainer && stack.length > 1) stack.pop()
+      continue
     }
 
-    add(fill, template.rawArea * areaScale)
+    const attrs = parseAttrs(attrsStr)
+
+    if (isContainer) {
+      const parent = top()
+      const frame = {
+        fill: attrs.fill ?? parent.fill,
+        scale: parent.scale * transformScale(attrs.transform),
+        hidden: parent.hidden || tagLower === 'defs' || tagLower === 'clippath',
+      }
+      if (!selfClose) stack.push(frame)
+      continue
+    }
+
+    if (tag === 'path' && attrs.d) {
+      const boxes = subpathBoxes(attrs.d)
+      const rawArea = boxes.reduce((sum, b) => sum + b.w * b.h, 0)
+      const fill = attrs.fill ?? top().fill
+
+      if (attrs.id) pathsById.set(attrs.id, { fill, rawArea })
+      if (top().hidden) continue
+
+      add(fill, rawArea * top().scale)
+
+      // A stroked line (e.g. the US flag's stripes) has ~zero geometric
+      // area of its own — stroke-width is what makes it visually thick.
+      if (attrs.stroke) {
+        const strokeWidth = Number(attrs['stroke-width'] ?? 0)
+        const strokeArea = boxes.reduce(
+          (sum, b) => sum + (b.w + strokeWidth) * (b.h + strokeWidth),
+          0,
+        )
+        add(attrs.stroke, strokeArea * top().scale)
+      }
+      continue
+    }
+
+    if (tag === 'circle' && attrs.r) {
+      if (top().hidden) continue
+      const fill = attrs.fill ?? top().fill
+      add(fill, Math.PI * Number(attrs.r) ** 2 * top().scale)
+      continue
+    }
+
+    if (tag === 'use') {
+      const href = attrs['xlink:href'] ?? attrs.href
+      const template = href && pathsById.get(href.replace(/^#/, ''))
+      if (!template) continue
+
+      const fill = attrs.fill ?? template.fill ?? top().fill
+      const areaScale = top().scale * transformScale(attrs.transform)
+      add(fill, template.rawArea * areaScale)
+      continue
+    }
   }
 
   const threshold = CANVAS_AREA * 0.03
@@ -524,14 +614,15 @@ async function main() {
       colorCount: countColors(svg),
       layout: MANUAL_LAYOUT[code] ?? detectLayout(svg),
       areaKm2: Math.round(geo.area),
+      aliases: ALIASES[code],
     }
   })
 
   const body = entries
-    .map(
-      (e) =>
-        `  { id: '${e.id}', category: '${e.category}', code: '${e.code}', name: ${JSON.stringify(e.name)}, continent: '${e.continent}', colorCount: ${e.colorCount}, layout: '${e.layout}', areaKm2: ${e.areaKm2} },`,
-    )
+    .map((e) => {
+      const aliasesField = e.aliases ? `, aliases: ${JSON.stringify(e.aliases)}` : ''
+      return `  { id: '${e.id}', category: '${e.category}', code: '${e.code}', name: ${JSON.stringify(e.name)}, continent: '${e.continent}', colorCount: ${e.colorCount}, layout: '${e.layout}', areaKm2: ${e.areaKm2}${aliasesField} },`
+    })
     .join('\n')
 
   const output = `export type Continent =
@@ -561,10 +652,11 @@ export interface Country {
   layout: FlagLayout
   areaKm2: number
   tags?: string[]
+  aliases?: string[] // accepted alternate names for typed-answer matching
 }
 
 // Generated by scripts/generate-flag-metadata.mjs — do not hand-edit the
-// id/category/continent/colorCount/layout/areaKm2 fields, re-run the script instead.
+// id/category/continent/colorCount/layout/areaKm2/aliases fields, re-run the script instead.
 export const countries: Country[] = [
 ${body}
 ]
