@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Claude Code agent worktrees and browser-test scratch output
+.claude/
+.playwright-mcp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
