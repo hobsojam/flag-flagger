@@ -1,20 +1,23 @@
 import { useState, type ReactNode } from 'react'
 import { Flag } from './components/Flag'
 import { MasteryGrid } from './components/MasteryGrid'
-import { useProgress } from './hooks/useProgress'
+import { useProgress, type SelectionMode } from './hooks/useProgress'
 import { useStats } from './hooks/useStats'
 import { buildQuestion, type Question } from './lib/quiz'
 
 type Choice = { code: string; isCorrect: boolean } | null
 type View = 'quiz' | 'progress'
-type QuizMode = 'flag-to-name' | 'name-to-flag'
+type RenderMode = 'flag-to-name' | 'name-to-flag'
 
 function App() {
   const { progress, nextFlag, recordAnswer: recordProgress } = useProgress()
-  const [question, setQuestion] = useState<Question>(() => buildQuestion(nextFlag()))
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>('adaptive')
+  const [question, setQuestion] = useState<Question>(() =>
+    buildQuestion(nextFlag(selectionMode)),
+  )
   const [choice, setChoice] = useState<Choice>(null)
   const [view, setView] = useState<View>('quiz')
-  const [mode, setMode] = useState<QuizMode>('flag-to-name')
+  const [renderMode, setRenderMode] = useState<RenderMode>('flag-to-name')
   const { stats, recordAnswer: recordStats, reset } = useStats()
 
   const accuracy =
@@ -28,14 +31,20 @@ function App() {
     recordProgress(question.answer.id, isCorrect)
   }
 
-  function handleNext() {
+  function handleNext(nextSelectionMode: SelectionMode = selectionMode) {
     setChoice(null)
-    setQuestion(buildQuestion(nextFlag()))
+    setQuestion(buildQuestion(nextFlag(nextSelectionMode)))
   }
 
-  function handleModeChange(next: QuizMode) {
-    if (next === mode) return
-    setMode(next)
+  function toggleSelectionMode() {
+    const next: SelectionMode = selectionMode === 'adaptive' ? 'weak' : 'adaptive'
+    setSelectionMode(next)
+    handleNext(next)
+  }
+
+  function handleRenderModeChange(next: RenderMode) {
+    if (next === renderMode) return
+    setRenderMode(next)
     setChoice(null)
   }
 
@@ -44,6 +53,12 @@ function App() {
       <header className="flex w-full items-center justify-between">
         <h1 className="text-2xl font-semibold">Flag Flagger</h1>
         <div className="flex items-center gap-4">
+          <button
+            onClick={toggleSelectionMode}
+            className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+          >
+            {selectionMode === 'adaptive' ? 'Practice weak flags' : 'Back to normal practice'}
+          </button>
           <button
             onClick={() => setView(view === 'quiz' ? 'progress' : 'quiz')}
             className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
@@ -60,20 +75,26 @@ function App() {
       </header>
 
       {view === 'quiz' && (
-        <div className="flex gap-2">
-          <ModeButton
-            active={mode === 'flag-to-name'}
-            onClick={() => handleModeChange('flag-to-name')}
-          >
-            Flag → Name
-          </ModeButton>
-          <ModeButton
-            active={mode === 'name-to-flag'}
-            onClick={() => handleModeChange('name-to-flag')}
-          >
-            Name → Flag
-          </ModeButton>
-        </div>
+        <>
+          {selectionMode === 'weak' && (
+            <p className="-mt-4 text-sm text-gray-500">Practicing your weakest flags only.</p>
+          )}
+
+          <div className="flex gap-2">
+            <ModeButton
+              active={renderMode === 'flag-to-name'}
+              onClick={() => handleRenderModeChange('flag-to-name')}
+            >
+              Flag → Name
+            </ModeButton>
+            <ModeButton
+              active={renderMode === 'name-to-flag'}
+              onClick={() => handleRenderModeChange('name-to-flag')}
+            >
+              Name → Flag
+            </ModeButton>
+          </div>
+        </>
       )}
 
       <dl className="grid w-full grid-cols-4 gap-2 text-center">
@@ -87,7 +108,7 @@ function App() {
         <MasteryGrid progress={progress} />
       ) : (
         <>
-          {mode === 'flag-to-name' ? (
+          {renderMode === 'flag-to-name' ? (
             <div className="w-full">
               <Flag code={question.answer.code} label="Which country is this?" />
             </div>
@@ -119,7 +140,7 @@ function App() {
                   disabled={!!choice}
                   className={`rounded-lg border-2 transition-colors ${style}`}
                 >
-                  {mode === 'flag-to-name' ? (
+                  {renderMode === 'flag-to-name' ? (
                     <span className="block px-4 py-3 text-left font-medium">{option.name}</span>
                   ) : (
                     <div className="p-2">
@@ -134,7 +155,7 @@ function App() {
           <div className="h-10">
             {choice && (
               <button
-                onClick={handleNext}
+                onClick={() => handleNext()}
                 autoFocus
                 className="rounded-lg bg-gray-900 px-6 py-2 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
               >
