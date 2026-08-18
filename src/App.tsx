@@ -87,7 +87,8 @@ function App() {
     }
     setChoice(null)
     setGuess('')
-    setQuestion(buildQuestion(nextFlag(nextSelectionMode, sessionPool())))
+    const pool = sessionPool()
+    setQuestion(buildQuestion(nextFlag(nextSelectionMode, pool), pool))
   }
 
   function toggleSelectionMode() {
@@ -104,7 +105,8 @@ function App() {
     setShowSummary(false)
     setChoice(null)
     setGuess('')
-    setQuestion(buildQuestion(nextFlag(selectionMode, filterByFocus(countries, config.focus))))
+    const pool = filterByFocus(countries, config.focus)
+    setQuestion(buildQuestion(nextFlag(selectionMode, pool), pool))
   }
 
   function endSession() {
