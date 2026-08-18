@@ -1,18 +1,20 @@
 import { useState } from 'react'
-import { countries, type Country } from '../data/countries'
+import type { Country } from '../data/countries'
 import { fetchFlagSummary, type FlagSummary } from '../lib/wikipedia'
 import { Flag } from './Flag'
 
 type SummaryState = 'loading' | 'error' | FlagSummary
 
-export function FlagLookup() {
+interface FlagLookupProps {
+  pool: Country[]
+}
+
+export function FlagLookup({ pool }: FlagLookupProps) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Country | null>(null)
   const [summary, setSummary] = useState<SummaryState | null>(null)
 
-  const filtered = countries.filter((c) =>
-    c.name.toLowerCase().includes(query.trim().toLowerCase()),
-  )
+  const filtered = pool.filter((c) => c.name.toLowerCase().includes(query.trim().toLowerCase()))
 
   async function selectCountry(country: Country) {
     setSelected(country)
@@ -36,7 +38,7 @@ export function FlagLookup() {
         </button>
 
         <div className="w-full">
-          <Flag code={selected.code} label={selected.name} />
+          <Flag flag={selected} label={selected.name} />
         </div>
         <h2 className="text-2xl font-semibold">{selected.name}</h2>
 
@@ -97,7 +99,7 @@ export function FlagLookup() {
             onClick={() => selectCountry(country)}
             className="flex flex-col items-center gap-1 rounded-lg border-2 border-gray-200 p-2 text-center hover:border-gray-400 dark:border-gray-800"
           >
-            <Flag code={country.code} label={country.name} />
+            <Flag flag={country} label={country.name} />
             <span className="text-xs font-medium">{country.name}</span>
           </button>
         ))}

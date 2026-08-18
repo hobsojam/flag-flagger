@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { countries, type Continent, type FlagLayout, type FlagTag } from '../data/countries'
+import type { Continent, Country, FlagLayout, FlagTag } from '../data/countries'
 import { CONTINENTS, filterByFocus, formatSlugLabel, LAYOUTS, TAGS, type Focus } from '../domain/focus'
 
 export type SessionInputMode = 'multiple-choice' | 'typed'
@@ -11,6 +11,7 @@ export interface SessionConfig {
 }
 
 interface SessionSetupProps {
+  pool: Country[]
   defaultConfig: SessionConfig
   onStart: (config: SessionConfig) => void
   onCancel: () => void
@@ -30,11 +31,11 @@ function optionValueToFocus(value: string): Focus {
   return { type, value: focusValue as FlagTag }
 }
 
-function countFor(focus: Focus): number {
-  return filterByFocus(countries, focus).length
-}
+export function SessionSetup({ pool, defaultConfig, onStart, onCancel }: SessionSetupProps) {
+  function countFor(focus: Focus): number {
+    return filterByFocus(pool, focus).length
+  }
 
-export function SessionSetup({ defaultConfig, onStart, onCancel }: SessionSetupProps) {
   const [length, setLength] = useState(defaultConfig.length)
   const [focus, setFocus] = useState<Focus>(defaultConfig.focus)
   const [inputMode, setInputMode] = useState<SessionInputMode>(defaultConfig.inputMode)
@@ -75,7 +76,7 @@ export function SessionSetup({ defaultConfig, onStart, onCancel }: SessionSetupP
           onChange={(e) => setFocus(optionValueToFocus(e.target.value))}
           className="w-full rounded-lg border-2 border-gray-300 px-4 py-2.5 font-medium capitalize focus:outline-none dark:border-gray-700 dark:bg-gray-900"
         >
-          <option value="all">All flags ({countries.length})</option>
+          <option value="all">All flags ({pool.length})</option>
           <optgroup label="Region">
             {CONTINENTS.map((c) => {
               const focus: Focus = { type: 'continent', value: c }

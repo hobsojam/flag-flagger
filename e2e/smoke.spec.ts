@@ -310,3 +310,64 @@ test('flag lookup shows a message when the summary fails to load', async ({ page
 
   await expect(page.getByText("Couldn't load information for this flag.")).toBeVisible()
 })
+
+test('historical flags checkbox is off by default and reveals a nested sensitive checkbox', async ({
+  page,
+}) => {
+  const historical = page.getByLabel('Include historical flags')
+  const sensitive = page.getByLabel('Include sensitive historical flags')
+  await expect(historical).not.toBeChecked()
+  await expect(sensitive).not.toBeVisible()
+
+  await historical.check()
+  await expect(sensitive).toBeVisible()
+  await expect(sensitive).not.toBeChecked()
+
+  await historical.uncheck()
+  await expect(sensitive).not.toBeVisible()
+})
+
+test('historical flag preference persists across reload and clears sensitive when unchecked', async ({
+  page,
+}) => {
+  await page.getByLabel('Include historical flags').check()
+  await page.getByLabel('Include sensitive historical flags').check()
+  await page.reload()
+
+  await expect(page.getByLabel('Include historical flags')).toBeChecked()
+  await expect(page.getByLabel('Include sensitive historical flags')).toBeChecked()
+
+  await page.getByLabel('Include historical flags').uncheck()
+  await page.reload()
+
+  await expect(page.getByLabel('Include historical flags')).not.toBeChecked()
+  await expect(page.getByLabel('Include sensitive historical flags')).not.toBeVisible()
+})
+
+test('enabling historical flags adds tiles to the mastery grid', async ({ page }) => {
+  await page.getByRole('button', { name: 'View progress' }).click()
+  const baseline = await page.getByRole('img').count()
+  await page.getByRole('button', { name: 'Back to quiz' }).click()
+
+  await page.getByLabel('Include historical flags').check()
+
+  await page.getByRole('button', { name: 'View progress' }).click()
+  const withHistorical = await page.getByRole('img').count()
+  expect(withHistorical).toBe(baseline + 25)
+
+  await page.getByLabel('Include sensitive historical flags').check()
+  const withSensitive = await page.getByRole('img').count()
+  expect(withSensitive).toBe(baseline + 28)
+})
+
+test('flag lookup only surfaces historical entries once enabled', async ({ page }) => {
+  await page.getByRole('button', { name: 'Flag lookup' }).click()
+  await page.getByLabel('Search countries').fill('soviet union')
+  await expect(page.getByText('No countries match')).toBeVisible()
+  await page.getByRole('button', { name: 'Back to quiz' }).click()
+
+  await page.getByLabel('Include historical flags').check()
+  await page.getByRole('button', { name: 'Flag lookup' }).click()
+  await page.getByLabel('Search countries').fill('soviet union')
+  await expect(page.locator('div.grid > button')).toHaveCount(1)
+})
