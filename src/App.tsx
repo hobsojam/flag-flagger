@@ -280,8 +280,14 @@ function App() {
     )
   }
 
+  const wideView = view === 'progress' || view === 'lookup'
+
   return (
-    <div className="mx-auto flex min-h-svh max-w-xl flex-col items-center gap-6 px-4 py-10">
+    <div
+      className={`mx-auto flex min-h-svh flex-col items-center gap-6 px-4 py-10 ${
+        wideView ? 'max-w-6xl' : 'max-w-2xl'
+      }`}
+    >
       <header className="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex items-baseline gap-2">
           <h1 className="whitespace-nowrap text-xl font-semibold sm:text-2xl">Flag Flagger</h1>
