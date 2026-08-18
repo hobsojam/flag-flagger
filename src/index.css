@@ -1,0 +1,10 @@
+@import 'tailwindcss';
+@import 'flag-icons/css/flag-icons.min.css';
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+}
