@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Flag } from './components/Flag'
+import { FlagLookup } from './components/FlagLookup'
 import { MasteryGrid } from './components/MasteryGrid'
 import { SessionSummary } from './components/SessionSummary'
 import { countries } from './data/countries'
@@ -12,7 +13,7 @@ import { prefetchFlagAssets } from './lib/prefetchFlags'
 import { buildQuestion, type Question } from './lib/quiz'
 
 type Choice = { code: string; isCorrect: boolean } | null
-type View = 'quiz' | 'progress'
+type View = 'quiz' | 'progress' | 'lookup'
 type RenderMode = 'flag-to-name' | 'name-to-flag'
 type InputMode = 'multiple-choice' | 'typed'
 
@@ -136,12 +137,29 @@ function App() {
           >
             {selectionMode === 'adaptive' ? 'Practice weak flags' : 'Back to normal practice'}
           </button>
-          <button
-            onClick={() => setView(view === 'quiz' ? 'progress' : 'quiz')}
-            className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
-          >
-            {view === 'quiz' ? 'View progress' : 'Back to quiz'}
-          </button>
+          {view === 'quiz' ? (
+            <>
+              <button
+                onClick={() => setView('progress')}
+                className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+              >
+                View progress
+              </button>
+              <button
+                onClick={() => setView('lookup')}
+                className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+              >
+                Flag lookup
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setView('quiz')}
+              className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+            >
+              Back to quiz
+            </button>
+          )}
           <button
             onClick={reset}
             className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
@@ -205,6 +223,8 @@ function App() {
 
         {view === 'progress' ? (
           <MasteryGrid progress={progress} />
+        ) : view === 'lookup' ? (
+          <FlagLookup />
         ) : showSummary ? (
           <SessionSummary
             summary={summarizeSession(session.answers, countries)}
