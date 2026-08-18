@@ -1,13 +1,15 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Flag } from './components/Flag'
 import { MasteryGrid } from './components/MasteryGrid'
 import { useProgress, type SelectionMode } from './hooks/useProgress'
 import { useStats } from './hooks/useStats'
+import { isCorrectGuess } from './lib/match'
 import { buildQuestion, type Question } from './lib/quiz'
 
 type Choice = { code: string; isCorrect: boolean } | null
 type View = 'quiz' | 'progress'
 type RenderMode = 'flag-to-name' | 'name-to-flag'
+type InputMode = 'multiple-choice' | 'typed'
 
 function App() {
   const { progress, nextFlag, recordAnswer: recordProgress } = useProgress()
@@ -18,6 +20,8 @@ function App() {
   const [choice, setChoice] = useState<Choice>(null)
   const [view, setView] = useState<View>('quiz')
   const [renderMode, setRenderMode] = useState<RenderMode>('flag-to-name')
+  const [inputMode, setInputMode] = useState<InputMode>('multiple-choice')
+  const [guess, setGuess] = useState('')
   const { stats, recordAnswer: recordStats, reset } = useStats()
 
   const accuracy =
@@ -31,8 +35,18 @@ function App() {
     recordProgress(question.answer.id, isCorrect)
   }
 
+  function handleGuessSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (choice || !guess.trim()) return
+    const isCorrect = isCorrectGuess(guess, question.answer)
+    setChoice({ code: question.answer.code, isCorrect })
+    recordStats(isCorrect)
+    recordProgress(question.answer.id, isCorrect)
+  }
+
   function handleNext(nextSelectionMode: SelectionMode = selectionMode) {
     setChoice(null)
+    setGuess('')
     setQuestion(buildQuestion(nextFlag(nextSelectionMode)))
   }
 
@@ -46,7 +60,17 @@ function App() {
     if (next === renderMode) return
     setRenderMode(next)
     setChoice(null)
+    setGuess('')
   }
+
+  function handleInputModeChange(next: InputMode) {
+    if (next === inputMode) return
+    setInputMode(next)
+    setChoice(null)
+    setGuess('')
+  }
+
+  const showMultipleChoice = renderMode === 'name-to-flag' || inputMode === 'multiple-choice'
 
   return (
     <div className="mx-auto flex min-h-svh max-w-xl flex-col items-center gap-6 px-4 py-10">
@@ -80,7 +104,7 @@ function App() {
             <p className="-mt-4 text-sm text-gray-500">Practicing your weakest flags only.</p>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             <ModeButton
               active={renderMode === 'flag-to-name'}
               onClick={() => handleRenderModeChange('flag-to-name')}
@@ -93,6 +117,22 @@ function App() {
             >
               Name → Flag
             </ModeButton>
+            {renderMode === 'flag-to-name' && (
+              <>
+                <ModeButton
+                  active={inputMode === 'multiple-choice'}
+                  onClick={() => handleInputModeChange('multiple-choice')}
+                >
+                  Multiple choice
+                </ModeButton>
+                <ModeButton
+                  active={inputMode === 'typed'}
+                  onClick={() => handleInputModeChange('typed')}
+                >
+                  Type the answer
+                </ModeButton>
+              </>
+            )}
           </div>
         </>
       )}
@@ -116,41 +156,74 @@ function App() {
             <p className="text-3xl font-semibold">{question.answer.name}</p>
           )}
 
-          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
-            {question.options.map((option) => {
-              const isSelected = choice?.code === option.code
-              const isAnswer = choice && option.code === question.answer.code
+          {showMultipleChoice ? (
+            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+              {question.options.map((option) => {
+                const isSelected = choice?.code === option.code
+                const isAnswer = choice && option.code === question.answer.code
 
-              let style =
-                'border-gray-300 bg-white hover:border-gray-400 dark:bg-gray-900 dark:border-gray-700'
-              if (choice) {
-                if (isAnswer) {
-                  style = 'border-green-500 bg-green-50 dark:bg-green-950'
-                } else if (isSelected) {
-                  style = 'border-red-500 bg-red-50 dark:bg-red-950'
-                } else {
-                  style = 'border-gray-200 opacity-60 dark:border-gray-800'
+                let style =
+                  'border-gray-300 bg-white hover:border-gray-400 dark:bg-gray-900 dark:border-gray-700'
+                if (choice) {
+                  if (isAnswer) {
+                    style = 'border-green-500 bg-green-50 dark:bg-green-950'
+                  } else if (isSelected) {
+                    style = 'border-red-500 bg-red-50 dark:bg-red-950'
+                  } else {
+                    style = 'border-gray-200 opacity-60 dark:border-gray-800'
+                  }
                 }
-              }
 
-              return (
+                return (
+                  <button
+                    key={option.code}
+                    onClick={() => handleAnswer(option.code)}
+                    disabled={!!choice}
+                    className={`rounded-lg border-2 transition-colors ${style}`}
+                  >
+                    {renderMode === 'flag-to-name' ? (
+                      <span className="block px-4 py-3 text-left font-medium">{option.name}</span>
+                    ) : (
+                      <div className="p-2">
+                        <Flag code={option.code} label={option.name} />
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <form onSubmit={handleGuessSubmit} className="flex w-full flex-col gap-3">
+              <input
+                type="text"
+                value={guess}
+                onChange={(e) => setGuess(e.target.value)}
+                disabled={!!choice}
+                autoFocus
+                placeholder="Type the country name..."
+                className={`w-full rounded-lg border-2 px-4 py-3 font-medium transition-colors focus:outline-none ${
+                  choice
+                    ? choice.isCorrect
+                      ? 'border-green-500 bg-green-50 dark:bg-green-950'
+                      : 'border-red-500 bg-red-50 dark:bg-red-950'
+                    : 'border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700'
+                }`}
+              />
+              {choice && !choice.isCorrect && (
+                <p className="text-sm text-gray-500">
+                  Correct answer: <span className="font-medium">{question.answer.name}</span>
+                </p>
+              )}
+              {!choice && (
                 <button
-                  key={option.code}
-                  onClick={() => handleAnswer(option.code)}
-                  disabled={!!choice}
-                  className={`rounded-lg border-2 transition-colors ${style}`}
+                  type="submit"
+                  className="rounded-lg bg-gray-900 px-6 py-2 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
                 >
-                  {renderMode === 'flag-to-name' ? (
-                    <span className="block px-4 py-3 text-left font-medium">{option.name}</span>
-                  ) : (
-                    <div className="p-2">
-                      <Flag code={option.code} label={option.name} />
-                    </div>
-                  )}
+                  Submit
                 </button>
-              )
-            })}
-          </div>
+              )}
+            </form>
+          )}
 
           <div className="h-10">
             {choice && (
