@@ -1,32 +1,41 @@
-# React + TypeScript + Vite
+# Flag Flagger
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A web-based quiz for learning country flags. Answers are tracked per-flag, and
+a confidence-based scheduler biases the quiz toward flags you get wrong, so
+practice naturally focuses on your weak spots instead of repeating flags you
+already know.
 
-Currently, two official plugins are available:
+## Getting started
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run build` | Type-check and build for production |
+| `npm test` | Run unit tests (Vitest) |
+| `npm run lint` | Lint the codebase (oxlint) |
+| `npm run preview` | Preview a production build locally |
+
+## How it works
+
+- `src/domain/` holds the adaptive scheduler as plain, framework-free
+  functions: per-flag confidence tracking (`progress.ts`) and weighted-random
+  question selection biased toward low-confidence flags (`scheduler.ts`).
+- `src/domain/storage.ts` persists progress to `localStorage` behind a small
+  interface, so a different backend can be swapped in later without touching
+  the scheduling logic.
+- `src/data/countries.ts` is generated, not hand-written — see
+  `scripts/generate-flag-metadata.mjs`. It tags each country with continent,
+  flag layout (stripes, cross, canton, etc.), color count, and area, derived
+  from the flag-icons SVGs and a public country dataset. Re-run the script to
+  regenerate it after adding countries or updating flag-icons.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
