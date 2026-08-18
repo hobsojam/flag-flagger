@@ -1,9 +1,10 @@
-import { countries } from '../data/countries'
+import type { Country } from '../data/countries'
 import { createRecord, effectiveConfidence, type ProgressMap } from '../domain/progress'
 import { Flag } from './Flag'
 
 interface MasteryGridProps {
-  progress: ProgressMap
+  readonly progress: ProgressMap
+  readonly pool: Country[]
 }
 
 function tierClass(seen: number, confidence: number): string {
@@ -13,12 +14,12 @@ function tierClass(seen: number, confidence: number): string {
   return 'border-red-500'
 }
 
-export function MasteryGrid({ progress }: MasteryGridProps) {
+export function MasteryGrid({ progress, pool }: MasteryGridProps) {
   const now = Date.now()
 
   return (
     <div className="grid w-full grid-cols-6 items-start gap-2 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-[repeat(14,minmax(0,1fr))] 2xl:grid-cols-[repeat(16,minmax(0,1fr))]">
-      {countries.map((country) => {
+      {pool.map((country) => {
         const record = progress[country.id] ?? createRecord(country.id)
         const confidence = effectiveConfidence(record, now)
         const status =
@@ -26,11 +27,11 @@ export function MasteryGrid({ progress }: MasteryGridProps) {
 
         return (
           <div
-            key={country.code}
+            key={country.id}
             title={`${country.name} — ${status}`}
             className={`overflow-hidden rounded border-2 ${tierClass(record.seen, confidence)}`}
           >
-            <Flag code={country.code} label={country.name} />
+            <Flag flag={country} label={country.name} />
           </div>
         )
       })}

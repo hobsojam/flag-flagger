@@ -1,12 +1,14 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Flag } from './components/Flag'
 import { FlagLookup } from './components/FlagLookup'
 import { MasteryGrid } from './components/MasteryGrid'
 import { SessionSetup, type SessionConfig } from './components/SessionSetup'
 import { SessionSummary } from './components/SessionSummary'
 import { countries } from './data/countries'
+import { historicalFlags } from './data/historicalFlags'
 import { filterByFocus, formatSlugLabel } from './domain/focus'
 import { summarizeSession } from './domain/session'
+import { useFlagCategoryPreferences } from './hooks/useFlagCategoryPreferences'
 import { useProgress, type SelectionMode } from './hooks/useProgress'
 import { DEFAULT_SESSION_LENGTH, useSession } from './hooks/useSession'
 import { useSoundPreference } from './hooks/useSoundPreference'
@@ -29,10 +31,19 @@ const DEFAULT_SESSION_CONFIG: SessionConfig = {
 }
 
 function App() {
+  const { includeHistorical, includeSensitive, setIncludeHistorical, setIncludeSensitive } =
+    useFlagCategoryPreferences()
+  const pool = useMemo(
+    () => [
+      ...countries,
+      ...(includeHistorical ? historicalFlags.filter((f) => includeSensitive || !f.sensitive) : []),
+    ],
+    [includeHistorical, includeSensitive],
+  )
   const { progress, nextFlag, recordAnswer: recordProgress } = useProgress()
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('adaptive')
   const [question, setQuestion] = useState<Question>(() =>
-    buildQuestion(nextFlag(selectionMode)),
+    buildQuestion(nextFlag(selectionMode, pool), pool),
   )
   const [choice, setChoice] = useState<Choice>(null)
   const [view, setView] = useState<View>('quiz')
@@ -55,8 +66,8 @@ function App() {
     // inlined into the CSS bundle so they're less likely to show blank
     // the first time the quiz picks one.
     const schedule = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 200))
-    schedule(prefetchFlagAssets)
-  }, [])
+    schedule(() => prefetchFlagAssets(pool))
+  }, [pool])
 
   function playFeedbackSound(isCorrect: boolean) {
     if (!soundEnabled) return
@@ -88,7 +99,7 @@ function App() {
   }
 
   function sessionPool() {
-    return session.active ? filterByFocus(countries, sessionConfig.focus) : countries
+    return session.active ? filterByFocus(pool, sessionConfig.focus) : pool
   }
 
   function handleNext(nextSelectionMode: SelectionMode = selectionMode) {
@@ -120,8 +131,8 @@ function App() {
     setShowSummary(false)
     setChoice(null)
     setGuess('')
-    const pool = filterByFocus(countries, config.focus)
-    setQuestion(buildQuestion(nextFlag(selectionMode, pool), pool))
+    const sessionScopedPool = filterByFocus(pool, config.focus)
+    setQuestion(buildQuestion(nextFlag(selectionMode, sessionScopedPool), sessionScopedPool))
   }
 
   function endSession() {
@@ -129,7 +140,7 @@ function App() {
     setShowSummary(false)
     setChoice(null)
     setGuess('')
-    setQuestion(buildQuestion(nextFlag(selectionMode)))
+    setQuestion(buildQuestion(nextFlag(selectionMode, pool), pool))
   }
 
   function handleRenderModeChange(next: RenderMode) {
@@ -155,11 +166,12 @@ function App() {
     : ''
 
   function renderMainView() {
-    if (view === 'progress') return <MasteryGrid progress={progress} />
-    if (view === 'lookup') return <FlagLookup />
+    if (view === 'progress') return <MasteryGrid progress={progress} pool={pool} />
+    if (view === 'lookup') return <FlagLookup pool={pool} />
     if (showSessionSetup) {
       return (
         <SessionSetup
+          pool={pool}
           defaultConfig={sessionConfig}
           onStart={startSession}
           onCancel={() => setShowSessionSetup(false)}
@@ -169,7 +181,7 @@ function App() {
     if (showSummary) {
       return (
         <SessionSummary
-          summary={summarizeSession(session.answers, countries)}
+          summary={summarizeSession(session.answers, pool)}
           onPlayAgain={() => startSession()}
           onEndSession={endSession}
         />
@@ -184,7 +196,7 @@ function App() {
 
         {renderMode === 'flag-to-name' ? (
           <div className="w-full">
-            <Flag code={question.answer.code} label="Which country is this?" />
+            <Flag flag={question.answer} label="Which country is this?" />
           </div>
         ) : (
           <p className="text-3xl font-semibold">{question.answer.name}</p>
@@ -223,7 +235,7 @@ function App() {
                     <span className="block px-4 py-3 text-left font-medium">{option.name}</span>
                   ) : (
                     <div className="p-2">
-                      <Flag code={option.code} label={option.name} />
+                      <Flag flag={option} label={option.name} />
                     </div>
                   )}
                 </button>
@@ -355,6 +367,26 @@ function App() {
           >
             Reset stats
           </button>
+        </div>
+        <div className="flex w-full flex-col items-start gap-0.5 text-sm text-gray-500">
+          <label className="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={includeHistorical}
+              onChange={(e) => setIncludeHistorical(e.target.checked)}
+            />{' '}
+            Include historical flags
+          </label>
+          {includeHistorical && (
+            <label className="flex items-center gap-1.5 pl-5">
+              <input
+                type="checkbox"
+                checked={includeSensitive}
+                onChange={(e) => setIncludeSensitive(e.target.checked)}
+              />{' '}
+              Include sensitive historical flags
+            </label>
+          )}
         </div>
       </header>
 
