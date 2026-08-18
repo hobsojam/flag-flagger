@@ -59,10 +59,10 @@ console.log('Dimensions:', `${info.width} x ${info.height}`)
 
 const svgRes = await fetch(info.url, { headers: { 'User-Agent': USER_AGENT } })
 const svgBody = await svgRes.text()
-const outPath = path.join(OUT_DIR, `${code}.svg`)
+const outPath = path.resolve(OUT_DIR, `${code}.svg`)
 // Defense in depth alongside CODE_PATTERN above: refuse to write outside
 // OUT_DIR even if some future change loosens that pattern.
-if (path.relative(OUT_DIR, outPath).startsWith('..')) {
+if (!outPath.startsWith(OUT_DIR + path.sep)) {
   console.error(`Refusing to write outside ${OUT_DIR}: ${outPath}`)
   process.exit(1)
 }
