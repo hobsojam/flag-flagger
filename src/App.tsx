@@ -187,7 +187,9 @@ function App() {
         )}
 
         {showMultipleChoice ? (
-          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+          <div
+            className={`grid w-full grid-cols-1 gap-3 sm:grid-cols-2 ${renderMode === 'name-to-flag' ? 'items-start' : ''}`}
+          >
             {question.options.map((option) => {
               const isSelected = choice?.code === option.code
               const isAnswer = choice && option.code === question.answer.code

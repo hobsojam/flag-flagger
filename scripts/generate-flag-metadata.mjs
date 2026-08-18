@@ -311,6 +311,217 @@ const ALIASES = {
   tz: ['United Republic of Tanzania'],
 }
 
+// Real official flag aspect ratios (width:height, small integer units),
+// since flag-icons' art is normalized onto a uniform 4:3 (or 1:1 square)
+// canvas regardless of each country's actual proportions. Compiled from the
+// "List of national flags of sovereign states" Wikipedia article's
+// {{sortratio}} template (height listed first there, hence the flip below)
+// plus each country's own "Flag of X" article infobox for entries missing
+// from that table. Not derivable from the SVG itself, so — like ALIASES —
+// this lives in the generator rather than being computed.
+const FLAG_RATIOS = {
+  ad: [10, 7],
+  ae: [2, 1],
+  af: [2, 1],
+  ag: [3, 2],
+  al: [7, 5],
+  am: [2, 1],
+  ao: [3, 2],
+  ar: [8, 5],
+  at: [3, 2],
+  au: [2, 1],
+  az: [2, 1],
+  ba: [2, 1],
+  bb: [3, 2],
+  bd: [5, 3],
+  be: [15, 13],
+  bf: [3, 2],
+  bg: [5, 3],
+  bh: [5, 3],
+  bi: [5, 3],
+  bj: [3, 2],
+  bn: [2, 1],
+  bo: [22, 15],
+  br: [10, 7],
+  bs: [2, 1],
+  bt: [3, 2],
+  bw: [3, 2],
+  by: [2, 1],
+  bz: [5, 3],
+  ca: [2, 1],
+  cd: [4, 3],
+  cf: [5, 3],
+  cg: [3, 2],
+  ch: [1, 1],
+  ci: [3, 2],
+  cl: [3, 2],
+  cm: [3, 2],
+  cn: [3, 2],
+  co: [3, 2],
+  cr: [5, 3],
+  cu: [2, 1],
+  cv: [3, 2],
+  cy: [3, 2],
+  cz: [3, 2],
+  de: [5, 3],
+  dj: [3, 2],
+  dk: [37, 28],
+  dm: [2, 1],
+  do: [3, 2],
+  dz: [3, 2],
+  ec: [3, 2],
+  ee: [11, 7],
+  eg: [3, 2],
+  er: [2, 1],
+  es: [3, 2],
+  et: [2, 1],
+  fi: [18, 11],
+  fj: [2, 1],
+  fm: [19, 10],
+  fr: [3, 2],
+  ga: [4, 3],
+  gb: [2, 1],
+  gd: [5, 3],
+  ge: [3, 2],
+  gh: [3, 2],
+  gm: [3, 2],
+  gn: [3, 2],
+  gq: [3, 2],
+  gr: [3, 2],
+  gt: [8, 5],
+  gw: [2, 1],
+  gy: [5, 3],
+  hn: [2, 1],
+  hr: [2, 1],
+  ht: [5, 3],
+  hu: [2, 1],
+  id: [3, 2],
+  ie: [2, 1],
+  il: [11, 8],
+  in: [3, 2],
+  iq: [3, 2],
+  ir: [7, 4],
+  is: [25, 18],
+  it: [3, 2],
+  jm: [2, 1],
+  jo: [2, 1],
+  jp: [3, 2],
+  ke: [3, 2],
+  kg: [5, 3],
+  kh: [3, 2],
+  ki: [2, 1],
+  km: [5, 3],
+  kn: [3, 2],
+  kp: [2, 1],
+  kr: [3, 2],
+  kw: [2, 1],
+  kz: [2, 1],
+  la: [3, 2],
+  lb: [3, 2],
+  lc: [2, 1],
+  li: [5, 3],
+  lk: [2, 1],
+  lr: [19, 10],
+  ls: [3, 2],
+  lt: [5, 3],
+  lu: [5, 3],
+  lv: [2, 1],
+  ly: [2, 1],
+  ma: [3, 2],
+  mc: [5, 4],
+  md: [2, 1],
+  me: [2, 1],
+  mg: [3, 2],
+  mh: [19, 10],
+  mk: [2, 1],
+  ml: [3, 2],
+  mm: [3, 2],
+  mn: [2, 1],
+  mr: [3, 2],
+  mt: [3, 2],
+  mu: [3, 2],
+  mv: [3, 2],
+  mw: [3, 2],
+  mx: [7, 4],
+  my: [2, 1],
+  mz: [3, 2],
+  na: [3, 2],
+  ne: [7, 6],
+  ng: [2, 1],
+  ni: [5, 3],
+  nl: [3, 2],
+  no: [11, 8],
+  np: [4, 3], // non-rectangular pennant shape (~1:1.219 bounding box) -- cropping the padded 4:3 art to that portrait ratio risks mangling the design, so this one keeps the historical box on purpose (see NON_RECTANGULAR below)
+  nr: [2, 1],
+  nz: [2, 1],
+  om: [7, 4],
+  pa: [3, 2],
+  pe: [3, 2],
+  pg: [4, 3],
+  ph: [2, 1],
+  pk: [3, 2],
+  pl: [8, 5],
+  pt: [3, 2],
+  pw: [8, 5],
+  py: [20, 11],
+  qa: [28, 11],
+  ro: [3, 2],
+  rs: [5, 3],
+  ru: [3, 2],
+  rw: [3, 2],
+  sa: [3, 2],
+  sb: [2, 1],
+  sc: [2, 1],
+  sd: [2, 1],
+  se: [8, 5],
+  sg: [3, 2],
+  si: [2, 1],
+  sk: [3, 2],
+  sl: [3, 2],
+  sm: [4, 3],
+  sn: [3, 2],
+  so: [3, 2],
+  sr: [3, 2],
+  ss: [2, 1],
+  st: [2, 1],
+  sv: [5, 3],
+  sy: [3, 2],
+  sz: [3, 2],
+  td: [3, 2],
+  tg: [3, 2],
+  th: [3, 2],
+  tj: [2, 1],
+  tl: [2, 1],
+  tm: [3, 2],
+  tn: [3, 2],
+  to: [2, 1],
+  tr: [3, 2],
+  tt: [5, 3],
+  tv: [2, 1],
+  tw: [3, 2],
+  tz: [3, 2],
+  ua: [3, 2],
+  ug: [3, 2],
+  us: [19, 10],
+  uy: [3, 2],
+  uz: [2, 1],
+  va: [1, 1],
+  vc: [3, 2],
+  ve: [3, 2],
+  vn: [3, 2],
+  vu: [3, 2],
+  ws: [2, 1],
+  ye: [3, 2],
+  za: [3, 2],
+  zm: [3, 2],
+  zw: [2, 1],
+}
+
+// Flags whose true shape isn't a rectangle at all, so no aspect ratio can
+// represent them — FLAG_RATIOS still gives these a (fallback) rectangle for
+// rendering, but nonRectangularFlag documents that it's an approximation.
+const NON_RECTANGULAR = new Set(['np'])
+
 const CONTINENT_BY_REGION = {
   Africa: 'Africa',
   Asia: 'Asia',
@@ -605,6 +816,10 @@ async function main() {
     const geo = areaByCode.get(code)
     if (!geo) throw new Error(`No area/region data for ${code}`)
 
+    const flagRatio = FLAG_RATIOS[code]
+    if (!flagRatio) throw new Error(`No flag ratio for ${code}`)
+    const [flagRatioW, flagRatioH] = flagRatio
+
     return {
       id: `country:${code}`,
       category: 'country',
@@ -614,14 +829,18 @@ async function main() {
       colorCount: countColors(svg),
       layout: MANUAL_LAYOUT[code] ?? detectLayout(svg),
       areaKm2: Math.round(geo.area),
+      flagRatioW,
+      flagRatioH,
+      nonRectangularFlag: NON_RECTANGULAR.has(code) || undefined,
       aliases: ALIASES[code],
     }
   })
 
   const body = entries
     .map((e) => {
+      const nonRectangularField = e.nonRectangularFlag ? `, nonRectangularFlag: true` : ''
       const aliasesField = e.aliases ? `, aliases: ${JSON.stringify(e.aliases)}` : ''
-      return `  { id: '${e.id}', category: '${e.category}', code: '${e.code}', name: ${JSON.stringify(e.name)}, continent: '${e.continent}', colorCount: ${e.colorCount}, layout: '${e.layout}', areaKm2: ${e.areaKm2}${aliasesField} },`
+      return `  { id: '${e.id}', category: '${e.category}', code: '${e.code}', name: ${JSON.stringify(e.name)}, continent: '${e.continent}', colorCount: ${e.colorCount}, layout: '${e.layout}', areaKm2: ${e.areaKm2}, flagRatioW: ${e.flagRatioW}, flagRatioH: ${e.flagRatioH}${nonRectangularField}${aliasesField} },`
     })
     .join('\n')
 
@@ -651,12 +870,16 @@ export interface Country {
   colorCount: number
   layout: FlagLayout
   areaKm2: number
+  flagRatioW: number // real official flag aspect ratio, e.g. 19/10 for the US
+  flagRatioH: number
+  nonRectangularFlag?: true // true shape isn't a rectangle at all (e.g. Nepal) — flagRatioW/H is a fallback box, not the real shape
   tags?: string[]
   aliases?: string[] // accepted alternate names for typed-answer matching
 }
 
 // Generated by scripts/generate-flag-metadata.mjs — do not hand-edit the
-// id/category/continent/colorCount/layout/areaKm2/aliases fields, re-run the script instead.
+// id/category/continent/colorCount/layout/areaKm2/flagRatioW/flagRatioH/nonRectangularFlag/aliases
+// fields, re-run the script instead.
 export const countries: Country[] = [
 ${body}
 ]
