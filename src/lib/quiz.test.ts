@@ -4,6 +4,8 @@ import { rankDistractors } from './quiz'
 
 function makeCountry(overrides: Partial<Country> & { code: string }): Country {
   return {
+    id: `country:${overrides.code}`,
+    category: 'country',
     name: overrides.code,
     continent: 'Europe',
     colorCount: 3,
