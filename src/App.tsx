@@ -1,16 +1,19 @@
 import { useState, type ReactNode } from 'react'
 import { Flag } from './components/Flag'
+import { MasteryGrid } from './components/MasteryGrid'
 import { useProgress } from './hooks/useProgress'
 import { useStats } from './hooks/useStats'
 import { buildQuestion, type Question } from './lib/quiz'
 
 type Choice = { code: string; isCorrect: boolean } | null
+type View = 'quiz' | 'progress'
 type QuizMode = 'flag-to-name' | 'name-to-flag'
 
 function App() {
-  const { nextFlag, recordAnswer: recordProgress } = useProgress()
+  const { progress, nextFlag, recordAnswer: recordProgress } = useProgress()
   const [question, setQuestion] = useState<Question>(() => buildQuestion(nextFlag()))
   const [choice, setChoice] = useState<Choice>(null)
+  const [view, setView] = useState<View>('quiz')
   const [mode, setMode] = useState<QuizMode>('flag-to-name')
   const { stats, recordAnswer: recordStats, reset } = useStats()
 
@@ -22,7 +25,7 @@ function App() {
     const isCorrect = code === question.answer.code
     setChoice({ code, isCorrect })
     recordStats(isCorrect)
-    recordProgress(question.answer.code, isCorrect)
+    recordProgress(question.answer.id, isCorrect)
   }
 
   function handleNext() {
@@ -40,22 +43,38 @@ function App() {
     <div className="mx-auto flex min-h-svh max-w-xl flex-col items-center gap-6 px-4 py-10">
       <header className="flex w-full items-center justify-between">
         <h1 className="text-2xl font-semibold">Flag Flagger</h1>
-        <button
-          onClick={reset}
-          className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
-        >
-          Reset stats
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setView(view === 'quiz' ? 'progress' : 'quiz')}
+            className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+          >
+            {view === 'quiz' ? 'View progress' : 'Back to quiz'}
+          </button>
+          <button
+            onClick={reset}
+            className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+          >
+            Reset stats
+          </button>
+        </div>
       </header>
 
-      <div className="flex gap-2">
-        <ModeButton active={mode === 'flag-to-name'} onClick={() => handleModeChange('flag-to-name')}>
-          Flag → Name
-        </ModeButton>
-        <ModeButton active={mode === 'name-to-flag'} onClick={() => handleModeChange('name-to-flag')}>
-          Name → Flag
-        </ModeButton>
-      </div>
+      {view === 'quiz' && (
+        <div className="flex gap-2">
+          <ModeButton
+            active={mode === 'flag-to-name'}
+            onClick={() => handleModeChange('flag-to-name')}
+          >
+            Flag → Name
+          </ModeButton>
+          <ModeButton
+            active={mode === 'name-to-flag'}
+            onClick={() => handleModeChange('name-to-flag')}
+          >
+            Name → Flag
+          </ModeButton>
+        </div>
+      )}
 
       <dl className="grid w-full grid-cols-4 gap-2 text-center">
         <Stat label="Answered" value={stats.answered} />
@@ -64,61 +83,67 @@ function App() {
         <Stat label="Best" value={stats.bestStreak} />
       </dl>
 
-      {mode === 'flag-to-name' ? (
-        <div className="w-full">
-          <Flag code={question.answer.code} label="Which country is this?" />
-        </div>
+      {view === 'progress' ? (
+        <MasteryGrid progress={progress} />
       ) : (
-        <p className="text-3xl font-semibold">{question.answer.name}</p>
+        <>
+          {mode === 'flag-to-name' ? (
+            <div className="w-full">
+              <Flag code={question.answer.code} label="Which country is this?" />
+            </div>
+          ) : (
+            <p className="text-3xl font-semibold">{question.answer.name}</p>
+          )}
+
+          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+            {question.options.map((option) => {
+              const isSelected = choice?.code === option.code
+              const isAnswer = choice && option.code === question.answer.code
+
+              let style =
+                'border-gray-300 bg-white hover:border-gray-400 dark:bg-gray-900 dark:border-gray-700'
+              if (choice) {
+                if (isAnswer) {
+                  style = 'border-green-500 bg-green-50 dark:bg-green-950'
+                } else if (isSelected) {
+                  style = 'border-red-500 bg-red-50 dark:bg-red-950'
+                } else {
+                  style = 'border-gray-200 opacity-60 dark:border-gray-800'
+                }
+              }
+
+              return (
+                <button
+                  key={option.code}
+                  onClick={() => handleAnswer(option.code)}
+                  disabled={!!choice}
+                  className={`rounded-lg border-2 transition-colors ${style}`}
+                >
+                  {mode === 'flag-to-name' ? (
+                    <span className="block px-4 py-3 text-left font-medium">{option.name}</span>
+                  ) : (
+                    <div className="p-2">
+                      <Flag code={option.code} label={option.name} />
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="h-10">
+            {choice && (
+              <button
+                onClick={handleNext}
+                autoFocus
+                className="rounded-lg bg-gray-900 px-6 py-2 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
+              >
+                Next flag →
+              </button>
+            )}
+          </div>
+        </>
       )}
-
-      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
-        {question.options.map((option) => {
-          const isSelected = choice?.code === option.code
-          const isAnswer = choice && option.code === question.answer.code
-
-          let style =
-            'border-gray-300 bg-white hover:border-gray-400 dark:bg-gray-900 dark:border-gray-700'
-          if (choice) {
-            if (isAnswer) {
-              style = 'border-green-500 bg-green-50 dark:bg-green-950'
-            } else if (isSelected) {
-              style = 'border-red-500 bg-red-50 dark:bg-red-950'
-            } else {
-              style = 'border-gray-200 opacity-60 dark:border-gray-800'
-            }
-          }
-
-          return (
-            <button
-              key={option.code}
-              onClick={() => handleAnswer(option.code)}
-              disabled={!!choice}
-              className={`rounded-lg border-2 transition-colors ${style}`}
-            >
-              {mode === 'flag-to-name' ? (
-                <span className="block px-4 py-3 text-left font-medium">{option.name}</span>
-              ) : (
-                <div className="p-2">
-                  <Flag code={option.code} label={option.name} />
-                </div>
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="h-10">
-        {choice && (
-          <button
-            onClick={handleNext}
-            autoFocus
-            className="rounded-lg bg-gray-900 px-6 py-2 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
-          >
-            Next flag →
-          </button>
-        )}
-      </div>
     </div>
   )
 }

@@ -14,14 +14,14 @@ export function useProgress() {
 
   const nextFlag = useCallback((): Country => {
     const flag = selectNextFlag(countries, progress, recentRef.current, Date.now())
-    recentRef.current = [flag.code, ...recentRef.current].slice(0, RECENT_HISTORY)
+    recentRef.current = [flag.id, ...recentRef.current].slice(0, RECENT_HISTORY)
     return flag
   }, [progress])
 
-  const recordAnswer = useCallback((code: string, isCorrect: boolean) => {
+  const recordAnswer = useCallback((id: string, isCorrect: boolean) => {
     setProgress((prev) => {
-      const existing = prev[code] ?? createRecord(code)
-      const next = { ...prev, [code]: updateRecord(existing, isCorrect, Date.now()) }
+      const existing = prev[id] ?? createRecord(id)
+      const next = { ...prev, [id]: updateRecord(existing, isCorrect, Date.now()) }
       localProgressStorage.save(next)
       return next
     })
