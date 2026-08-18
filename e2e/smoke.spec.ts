@@ -104,3 +104,31 @@ test('ending a session returns to normal practice', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Start session' })).toBeVisible()
   await expect(page.getByText(/Session: \d+\/10/)).not.toBeVisible()
 })
+
+test('announces the answer outcome to assistive tech via a live region', async ({ page }) => {
+  const status = page.getByRole('status')
+  await expect(status).toHaveText('')
+
+  await page.locator('div.grid > button').first().click()
+  await expect(status).toHaveText(/^(Correct!|Incorrect\. The correct answer is) /)
+})
+
+test('typed-answer input has an accessible label, not just a placeholder', async ({ page }) => {
+  await page.getByRole('button', { name: 'Type the answer' }).click()
+  await expect(page.getByLabel('Country name')).toBeVisible()
+})
+
+test('mode toggle buttons expose pressed state', async ({ page }) => {
+  const flagToName = page.getByRole('button', { name: 'Flag → Name' })
+  const nameToFlag = page.getByRole('button', { name: 'Name → Flag' })
+  await expect(flagToName).toHaveAttribute('aria-pressed', 'true')
+  await expect(nameToFlag).toHaveAttribute('aria-pressed', 'false')
+
+  await nameToFlag.click()
+  await expect(flagToName).toHaveAttribute('aria-pressed', 'false')
+  await expect(nameToFlag).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('main content is contained in a landmark', async ({ page }) => {
+  await expect(page.getByRole('main')).toBeVisible()
+})
