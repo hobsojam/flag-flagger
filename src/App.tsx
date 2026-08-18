@@ -23,7 +23,7 @@ function App() {
     const isCorrect = code === question.answer.code
     setChoice({ code, isCorrect })
     recordStats(isCorrect)
-    recordProgress(question.answer.code, isCorrect)
+    recordProgress(question.answer.id, isCorrect)
   }
 
   function handleNext() {

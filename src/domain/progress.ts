@@ -1,5 +1,5 @@
 export interface ProgressRecord {
-  code: string
+  id: string
   confidence: number // EMA of recent correctness, 0-1
   lastSeenAt: number // epoch ms
   seen: number
@@ -8,8 +8,8 @@ export interface ProgressRecord {
 
 export type ProgressMap = Record<string, ProgressRecord>
 
-export function createRecord(code: string): ProgressRecord {
-  return { code, confidence: 0, lastSeenAt: 0, seen: 0, correct: 0 }
+export function createRecord(id: string): ProgressRecord {
+  return { id, confidence: 0, lastSeenAt: 0, seen: 0, correct: 0 }
 }
 
 export function updateRecord(
