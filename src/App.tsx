@@ -5,7 +5,7 @@ import { MasteryGrid } from './components/MasteryGrid'
 import { SessionSetup, type SessionConfig } from './components/SessionSetup'
 import { SessionSummary } from './components/SessionSummary'
 import { countries } from './data/countries'
-import { filterByFocus, formatLayoutLabel } from './domain/focus'
+import { filterByFocus, formatSlugLabel } from './domain/focus'
 import { summarizeSession } from './domain/session'
 import { useProgress, type SelectionMode } from './hooks/useProgress'
 import { DEFAULT_SESSION_LENGTH, useSession } from './hooks/useSession'
@@ -362,11 +362,7 @@ function App() {
                 {sessionConfig.focus && (
                   <>
                     {' · '}
-                    <span className="capitalize">
-                      {sessionConfig.focus.type === 'layout'
-                        ? formatLayoutLabel(sessionConfig.focus.value)
-                        : sessionConfig.focus.value}
-                    </span>
+                    <span className="capitalize">{formatSlugLabel(sessionConfig.focus.value)}</span>
                   </>
                 )}
               </p>
