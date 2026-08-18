@@ -4,6 +4,9 @@ import { countries } from '../src/data/countries'
 const AFRICAN_NAMES = new Set(
   countries.filter((c) => c.continent === 'Africa').map((c) => c.name),
 )
+const ANIMAL_NAMES = new Set(
+  countries.filter((c) => c.tags?.includes('animal')).map((c) => c.name),
+)
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -162,7 +165,7 @@ test('session setup: choosing a flag count and focus area scopes the session', a
 }) => {
   await page.getByRole('button', { name: 'Start session' }).click()
   await page.getByLabel('Number of flags').selectOption('5')
-  await page.getByLabel('Focus area').selectOption('Europe')
+  await page.getByLabel('Focus area').selectOption('continent:Europe')
   await page.getByRole('button', { name: 'Start', exact: true }).click()
 
   await expect(page.getByText('Session: 0/5 · Europe')).toBeVisible()
@@ -172,7 +175,7 @@ test('focused session: every multiple-choice option matches the chosen region', 
   page,
 }) => {
   await page.getByRole('button', { name: 'Start session' }).click()
-  await page.getByLabel('Focus area').selectOption('Africa')
+  await page.getByLabel('Focus area').selectOption('continent:Africa')
   await page.getByRole('button', { name: 'Start', exact: true }).click()
 
   for (let i = 0; i < 3; i++) {
@@ -184,6 +187,23 @@ test('focused session: every multiple-choice option matches the chosen region', 
     }
     await options.first().click()
     await page.locator('div.h-10 button').click()
+  }
+})
+
+test('focused session: a content tag scopes both the answer and its distractors', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByLabel('Focus area').selectOption('tag:animal')
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+
+  await expect(page.getByText('Session: 0/10 · animal')).toBeVisible()
+
+  const options = page.locator('div.grid > button')
+  const names = await options.allTextContents()
+  expect(names).toHaveLength(4)
+  for (const name of names) {
+    expect(ANIMAL_NAMES.has(name)).toBe(true)
   }
 })
 

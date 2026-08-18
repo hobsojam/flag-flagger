@@ -522,6 +522,126 @@ const FLAG_RATIOS = {
 // rendering, but nonRectangularFlag documents that it's an approximation.
 const NON_RECTANGULAR = new Set(['np'])
 
+// Content/iconography tags -- what's actually depicted on a flag, as
+// opposed to continent/colorCount/layout which describe geography, palette,
+// and geometric structure. Compiled from each country's flag description in
+// the same Wikipedia table used for FLAG_RATIOS, cross-checked against the
+// flag-icons SVG directly wherever that table's description was missing,
+// malformed, or (for Afghanistan) described a different flag than the one
+// flag-icons actually ships. Sparse like ALIASES -- most flags have no
+// notable iconography beyond stripes/bands, so absence means no tag, not
+// "not yet researched".
+const FLAG_TAGS = {
+  af: ['emblem'],
+  ag: ['sun'],
+  al: ['animal'],
+  ao: ['emblem', 'star', 'weapon'],
+  au: ['star'],
+  az: ['crescent', 'star'],
+  ba: ['star'],
+  bf: ['star'],
+  bi: ['star'],
+  bn: ['emblem'],
+  br: ['star', 'text'],
+  bz: ['emblem'],
+  ca: ['plant'],
+  cd: ['star'],
+  cf: ['star'],
+  cl: ['star'],
+  cm: ['star'],
+  cn: ['star'],
+  cu: ['star'],
+  cv: ['star'],
+  cy: ['plant', 'map-silhouette'],
+  dj: ['star'],
+  dm: ['star', 'animal'],
+  dz: ['crescent', 'star'],
+  ec: ['emblem'],
+  eg: ['emblem', 'animal', 'text'],
+  er: ['plant'],
+  fj: ['emblem'],
+  fm: ['star'],
+  gd: ['star'],
+  gh: ['star'],
+  gq: ['emblem', 'star', 'plant', 'text'],
+  gw: ['star'],
+  hn: ['star'],
+  hr: ['emblem'],
+  il: ['star'],
+  iq: ['text'],
+  ir: ['emblem', 'text'],
+  jo: ['star'],
+  ke: ['weapon'],
+  kg: ['sun'],
+  ki: ['sun', 'animal'],
+  km: ['crescent', 'star'],
+  kn: ['star'],
+  kp: ['star'],
+  kz: ['sun', 'animal'],
+  lb: ['plant'],
+  lk: ['animal', 'plant', 'weapon'],
+  lr: ['star'],
+  ly: ['crescent', 'star'],
+  ma: ['emblem', 'star'],
+  md: ['emblem'],
+  me: ['emblem', 'animal'],
+  mh: ['star'],
+  mk: ['sun'],
+  mm: ['star'],
+  mn: ['emblem', 'sun'],
+  mr: ['crescent', 'star'],
+  mv: ['crescent'],
+  mw: ['sun'],
+  mx: ['emblem', 'animal'],
+  my: ['crescent', 'star'],
+  mz: ['star', 'weapon'],
+  na: ['sun'],
+  ni: ['emblem'],
+  np: ['sun'],
+  nr: ['star'],
+  nz: ['star'],
+  om: ['emblem', 'weapon'],
+  pa: ['star'],
+  pg: ['star', 'animal'],
+  ph: ['star', 'sun'],
+  pk: ['crescent', 'star'],
+  pt: ['emblem'],
+  py: ['emblem'],
+  rw: ['sun'],
+  sa: ['text'],
+  sb: ['star'],
+  sg: ['crescent', 'star'],
+  si: ['emblem', 'star'],
+  sk: ['emblem'],
+  sm: ['emblem', 'plant', 'text'],
+  sn: ['star'],
+  so: ['star'],
+  sr: ['star'],
+  ss: ['star'],
+  st: ['star'],
+  sv: ['text'],
+  sy: ['star'],
+  sz: ['weapon'],
+  tg: ['star'],
+  tj: ['star'],
+  tl: ['star'],
+  tm: ['crescent', 'star', 'plant'],
+  tn: ['crescent', 'star'],
+  tr: ['crescent', 'star'],
+  tv: ['star', 'map-silhouette'],
+  tw: ['sun'],
+  us: ['star'],
+  uy: ['sun'],
+  uz: ['crescent', 'star'],
+  va: ['emblem'],
+  ve: ['star'],
+  vn: ['star'],
+  vu: ['animal', 'plant'],
+  ws: ['star'],
+  zm: ['animal'],
+  zw: ['star', 'animal'],
+}
+
 const CONTINENT_BY_REGION = {
   Africa: 'Africa',
   Asia: 'Asia',
@@ -832,6 +952,7 @@ async function main() {
       flagRatioW,
       flagRatioH,
       nonRectangularFlag: NON_RECTANGULAR.has(code) || undefined,
+      tags: FLAG_TAGS[code],
       aliases: ALIASES[code],
     }
   })
@@ -839,8 +960,9 @@ async function main() {
   const body = entries
     .map((e) => {
       const nonRectangularField = e.nonRectangularFlag ? `, nonRectangularFlag: true` : ''
+      const tagsField = e.tags ? `, tags: ${JSON.stringify(e.tags)}` : ''
       const aliasesField = e.aliases ? `, aliases: ${JSON.stringify(e.aliases)}` : ''
-      return `  { id: '${e.id}', category: '${e.category}', code: '${e.code}', name: ${JSON.stringify(e.name)}, continent: '${e.continent}', colorCount: ${e.colorCount}, layout: '${e.layout}', areaKm2: ${e.areaKm2}, flagRatioW: ${e.flagRatioW}, flagRatioH: ${e.flagRatioH}${nonRectangularField}${aliasesField} },`
+      return `  { id: '${e.id}', category: '${e.category}', code: '${e.code}', name: ${JSON.stringify(e.name)}, continent: '${e.continent}', colorCount: ${e.colorCount}, layout: '${e.layout}', areaKm2: ${e.areaKm2}, flagRatioW: ${e.flagRatioW}, flagRatioH: ${e.flagRatioH}${nonRectangularField}${tagsField}${aliasesField} },`
     })
     .join('\n')
 
@@ -861,6 +983,17 @@ export type FlagLayout =
   | 'central-emblem'
   | 'other'
 
+export type FlagTag =
+  | 'emblem'
+  | 'crescent'
+  | 'star'
+  | 'sun'
+  | 'animal'
+  | 'plant'
+  | 'weapon'
+  | 'text'
+  | 'map-silhouette'
+
 export interface Country {
   id: string // globally unique across flag categories, e.g. 'country:us'
   category: 'country' // more categories (e.g. 'us-state') may join this union later
@@ -873,12 +1006,12 @@ export interface Country {
   flagRatioW: number // real official flag aspect ratio, e.g. 19/10 for the US
   flagRatioH: number
   nonRectangularFlag?: true // true shape isn't a rectangle at all (e.g. Nepal) — flagRatioW/H is a fallback box, not the real shape
-  tags?: string[]
+  tags?: FlagTag[] // what's depicted on the flag, e.g. ['emblem', 'animal'] for Mexico
   aliases?: string[] // accepted alternate names for typed-answer matching
 }
 
 // Generated by scripts/generate-flag-metadata.mjs — do not hand-edit the
-// id/category/continent/colorCount/layout/areaKm2/flagRatioW/flagRatioH/nonRectangularFlag/aliases
+// id/category/continent/colorCount/layout/areaKm2/flagRatioW/flagRatioH/nonRectangularFlag/tags/aliases
 // fields, re-run the script instead.
 export const countries: Country[] = [
 ${body}

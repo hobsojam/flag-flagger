@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import type { Continent, FlagLayout } from '../data/countries'
-import { CONTINENTS, LAYOUTS, formatLayoutLabel, type Focus } from '../domain/focus'
+import { countries, type Continent, type FlagLayout, type FlagTag } from '../data/countries'
+import { CONTINENTS, filterByFocus, formatSlugLabel, LAYOUTS, TAGS, type Focus } from '../domain/focus'
 
 export type SessionInputMode = 'multiple-choice' | 'typed'
 
@@ -24,10 +24,14 @@ function focusToOptionValue(focus: Focus): string {
 
 function optionValueToFocus(value: string): Focus {
   if (value === 'all') return null
-  const [type, focusValue] = value.split(':') as ['continent' | 'layout', string]
-  return type === 'continent'
-    ? { type, value: focusValue as Continent }
-    : { type, value: focusValue as FlagLayout }
+  const [type, focusValue] = value.split(':') as ['continent' | 'layout' | 'tag', string]
+  if (type === 'continent') return { type, value: focusValue as Continent }
+  if (type === 'layout') return { type, value: focusValue as FlagLayout }
+  return { type, value: focusValue as FlagTag }
+}
+
+function countFor(focus: Focus): number {
+  return filterByFocus(countries, focus).length
 }
 
 export function SessionSetup({ defaultConfig, onStart, onCancel }: SessionSetupProps) {
@@ -71,20 +75,36 @@ export function SessionSetup({ defaultConfig, onStart, onCancel }: SessionSetupP
           onChange={(e) => setFocus(optionValueToFocus(e.target.value))}
           className="w-full rounded-lg border-2 border-gray-300 px-4 py-2.5 font-medium capitalize focus:outline-none dark:border-gray-700 dark:bg-gray-900"
         >
-          <option value="all">All flags</option>
+          <option value="all">All flags ({countries.length})</option>
           <optgroup label="Region">
-            {CONTINENTS.map((c) => (
-              <option key={c} value={`continent:${c}`}>
-                {c}
-              </option>
-            ))}
+            {CONTINENTS.map((c) => {
+              const focus: Focus = { type: 'continent', value: c }
+              return (
+                <option key={c} value={`continent:${c}`}>
+                  {c} ({countFor(focus)})
+                </option>
+              )
+            })}
           </optgroup>
           <optgroup label="Flag style">
-            {LAYOUTS.map((l) => (
-              <option key={l} value={`layout:${l}`}>
-                {formatLayoutLabel(l)}
-              </option>
-            ))}
+            {LAYOUTS.map((l) => {
+              const focus: Focus = { type: 'layout', value: l }
+              return (
+                <option key={l} value={`layout:${l}`}>
+                  {formatSlugLabel(l)} ({countFor(focus)})
+                </option>
+              )
+            })}
+          </optgroup>
+          <optgroup label="Depicts">
+            {TAGS.map((t) => {
+              const focus: Focus = { type: 'tag', value: t }
+              return (
+                <option key={t} value={`tag:${t}`}>
+                  {formatSlugLabel(t)} ({countFor(focus)})
+                </option>
+              )
+            })}
           </optgroup>
         </select>
       </div>
