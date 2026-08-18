@@ -3,9 +3,9 @@ import { createRecord, effectiveConfidence, updateRecord } from './progress'
 
 describe('createRecord', () => {
   it('starts at zero confidence and zero history', () => {
-    const record = createRecord('de')
+    const record = createRecord('country:de')
     expect(record).toEqual({
-      code: 'de',
+      id: 'country:de',
       confidence: 0,
       lastSeenAt: 0,
       seen: 0,
@@ -16,7 +16,7 @@ describe('createRecord', () => {
 
 describe('updateRecord', () => {
   it('sets confidence to 1 on a first-ever correct answer', () => {
-    const record = updateRecord(createRecord('de'), true, 1000)
+    const record = updateRecord(createRecord('country:de'), true, 1000)
     expect(record.confidence).toBe(1)
     expect(record.seen).toBe(1)
     expect(record.correct).toBe(1)
@@ -24,14 +24,14 @@ describe('updateRecord', () => {
   })
 
   it('sets confidence to 0 on a first-ever wrong answer', () => {
-    const record = updateRecord(createRecord('de'), false, 1000)
+    const record = updateRecord(createRecord('country:de'), false, 1000)
     expect(record.confidence).toBe(0)
     expect(record.seen).toBe(1)
     expect(record.correct).toBe(0)
   })
 
   it('blends subsequent answers as a 0.7/0.3 EMA', () => {
-    let record = updateRecord(createRecord('de'), true, 0) // confidence 1
+    let record = updateRecord(createRecord('country:de'), true, 0) // confidence 1
     record = updateRecord(record, false, 1) // 1*0.7 + 0*0.3
     expect(record.confidence).toBeCloseTo(0.7)
     expect(record.seen).toBe(2)
@@ -39,7 +39,7 @@ describe('updateRecord', () => {
   })
 
   it('accumulates seen/correct counts across many answers', () => {
-    let record = createRecord('de')
+    let record = createRecord('country:de')
     record = updateRecord(record, true, 0)
     record = updateRecord(record, true, 1)
     record = updateRecord(record, false, 2)
@@ -50,16 +50,16 @@ describe('updateRecord', () => {
 
 describe('effectiveConfidence', () => {
   it('is 0 for a flag never seen', () => {
-    expect(effectiveConfidence(createRecord('de'), 1000)).toBe(0)
+    expect(effectiveConfidence(createRecord('country:de'), 1000)).toBe(0)
   })
 
   it('returns the raw confidence when queried at the moment it was last seen', () => {
-    const record = updateRecord(createRecord('de'), true, 1000)
+    const record = updateRecord(createRecord('country:de'), true, 1000)
     expect(effectiveConfidence(record, 1000)).toBeCloseTo(1)
   })
 
   it('decays as more time passes since last seen', () => {
-    const record = updateRecord(createRecord('de'), true, 0)
+    const record = updateRecord(createRecord('country:de'), true, 0)
     const oneDay = 1000 * 60 * 60 * 24
     const soon = effectiveConfidence(record, oneDay)
     const later = effectiveConfidence(record, oneDay * 30)
@@ -71,11 +71,11 @@ describe('effectiveConfidence', () => {
     const oneDay = 1000 * 60 * 60 * 24
 
     // Build a high-confidence record (several correct answers in a row).
-    let strong = createRecord('de')
+    let strong = createRecord('country:de')
     for (let i = 0; i < 5; i++) strong = updateRecord(strong, true, 0)
 
     // Build a low-but-nonzero-confidence record.
-    let shaky = createRecord('fr')
+    let shaky = createRecord('country:fr')
     shaky = updateRecord(shaky, true, 0)
     shaky = updateRecord(shaky, false, 0)
 
