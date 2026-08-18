@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Flag } from './components/Flag'
 import { MasteryGrid } from './components/MasteryGrid'
 import { useProgress } from './hooks/useProgress'
@@ -7,12 +7,14 @@ import { buildQuestion, type Question } from './lib/quiz'
 
 type Choice = { code: string; isCorrect: boolean } | null
 type View = 'quiz' | 'progress'
+type QuizMode = 'flag-to-name' | 'name-to-flag'
 
 function App() {
   const { progress, nextFlag, recordAnswer: recordProgress } = useProgress()
   const [question, setQuestion] = useState<Question>(() => buildQuestion(nextFlag()))
   const [choice, setChoice] = useState<Choice>(null)
   const [view, setView] = useState<View>('quiz')
+  const [mode, setMode] = useState<QuizMode>('flag-to-name')
   const { stats, recordAnswer: recordStats, reset } = useStats()
 
   const accuracy =
@@ -29,6 +31,12 @@ function App() {
   function handleNext() {
     setChoice(null)
     setQuestion(buildQuestion(nextFlag()))
+  }
+
+  function handleModeChange(next: QuizMode) {
+    if (next === mode) return
+    setMode(next)
+    setChoice(null)
   }
 
   return (
@@ -51,6 +59,23 @@ function App() {
         </div>
       </header>
 
+      {view === 'quiz' && (
+        <div className="flex gap-2">
+          <ModeButton
+            active={mode === 'flag-to-name'}
+            onClick={() => handleModeChange('flag-to-name')}
+          >
+            Flag → Name
+          </ModeButton>
+          <ModeButton
+            active={mode === 'name-to-flag'}
+            onClick={() => handleModeChange('name-to-flag')}
+          >
+            Name → Flag
+          </ModeButton>
+        </div>
+      )}
+
       <dl className="grid w-full grid-cols-4 gap-2 text-center">
         <Stat label="Answered" value={stats.answered} />
         <Stat label="Accuracy" value={`${accuracy}%`} />
@@ -62,9 +87,13 @@ function App() {
         <MasteryGrid progress={progress} />
       ) : (
         <>
-          <div className="w-full">
-            <Flag code={question.answer.code} label="Which country is this?" />
-          </div>
+          {mode === 'flag-to-name' ? (
+            <div className="w-full">
+              <Flag code={question.answer.code} label="Which country is this?" />
+            </div>
+          ) : (
+            <p className="text-3xl font-semibold">{question.answer.name}</p>
+          )}
 
           <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
             {question.options.map((option) => {
@@ -88,9 +117,15 @@ function App() {
                   key={option.code}
                   onClick={() => handleAnswer(option.code)}
                   disabled={!!choice}
-                  className={`rounded-lg border-2 px-4 py-3 text-left font-medium transition-colors ${style}`}
+                  className={`rounded-lg border-2 transition-colors ${style}`}
                 >
-                  {option.name}
+                  {mode === 'flag-to-name' ? (
+                    <span className="block px-4 py-3 text-left font-medium">{option.name}</span>
+                  ) : (
+                    <div className="p-2">
+                      <Flag code={option.code} label={option.name} />
+                    </div>
+                  )}
                 </button>
               )
             })}
@@ -119,6 +154,29 @@ function Stat({ label, value }: { label: string; value: string | number }) {
       <dt className="text-xs uppercase tracking-wide text-gray-500">{label}</dt>
       <dd className="text-lg font-semibold">{value}</dd>
     </div>
+  )
+}
+
+function ModeButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+        active
+          ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+      }`}
+    >
+      {children}
+    </button>
   )
 }
 
