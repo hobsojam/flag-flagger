@@ -76,8 +76,10 @@ test('reset stats zeroes the counters', async ({ page }) => {
   await expect(page.getByText('Answered').locator('..')).toContainText('0')
 })
 
-test('completes a 10-flag session and shows a summary', async ({ page }) => {
+test('configures and completes a 10-flag session and shows a summary', async ({ page }) => {
   await page.getByRole('button', { name: 'Start session' }).click()
+  await expect(page.getByRole('heading', { name: 'Start a session' })).toBeVisible()
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
   await expect(page.getByText('Session: 0/10')).toBeVisible()
 
   for (let i = 0; i < 10; i++) {
@@ -94,8 +96,29 @@ test('completes a 10-flag session and shows a summary', async ({ page }) => {
   await expect(page.getByText('Session: 0/10')).toBeVisible()
 })
 
+test('session setup: choosing a flag count and focus area scopes the session', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByLabel('Number of flags').selectOption('5')
+  await page.getByLabel('Focus area').selectOption('Europe')
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+
+  await expect(page.getByText('Session: 0/5 · Europe')).toBeVisible()
+})
+
+test('session setup can be cancelled without starting a session', async ({ page }) => {
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await expect(page.getByRole('heading', { name: 'Start a session' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByRole('heading', { name: 'Start a session' })).not.toBeVisible()
+  await expect(page.getByRole('img', { name: 'Which country is this?' })).toBeVisible()
+})
+
 test('ending a session returns to normal practice', async ({ page }) => {
   await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
   await page.locator('div.grid > button').first().click()
   await page.getByRole('button', { name: 'Next flag →' }).click()
   await expect(page.getByText('Session: 1/10')).toBeVisible()
