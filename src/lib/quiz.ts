@@ -33,8 +33,8 @@ export function rankDistractors(answer: Country, pool: Country[]): Country[] {
   )
 }
 
-export function buildQuestion(answer: Country): Question {
-  const pool = countries.filter((c) => c.code !== answer.code)
+export function buildQuestion(answer: Country, candidates: Country[] = countries): Question {
+  const pool = candidates.filter((c) => c.code !== answer.code)
   const distractors = rankDistractors(answer, pool).slice(0, 3)
 
   return {

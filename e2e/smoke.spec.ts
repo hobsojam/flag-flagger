@@ -1,4 +1,9 @@
 import { test, expect } from '@playwright/test'
+import { countries } from '../src/data/countries'
+
+const AFRICAN_NAMES = new Set(
+  countries.filter((c) => c.continent === 'Africa').map((c) => c.name),
+)
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -105,6 +110,25 @@ test('session setup: choosing a flag count and focus area scopes the session', a
   await page.getByRole('button', { name: 'Start', exact: true }).click()
 
   await expect(page.getByText('Session: 0/5 · Europe')).toBeVisible()
+})
+
+test('focused session: every multiple-choice option matches the chosen region', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByLabel('Focus area').selectOption('Africa')
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+
+  for (let i = 0; i < 3; i++) {
+    const options = page.locator('div.grid > button')
+    const names = await options.allTextContents()
+    expect(names).toHaveLength(4)
+    for (const name of names) {
+      expect(AFRICAN_NAMES.has(name)).toBe(true)
+    }
+    await options.first().click()
+    await page.locator('div.h-10 button').click()
+  }
 })
 
 test('session setup can be cancelled without starting a session', async ({ page }) => {
