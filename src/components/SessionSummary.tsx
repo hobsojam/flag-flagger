@@ -41,13 +41,13 @@ export function SessionSummary({ summary, onPlayAgain, onEndSession }: SessionSu
       <div className="flex gap-3">
         <button
           onClick={onPlayAgain}
-          className="rounded-lg bg-gray-900 px-6 py-2 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
+          className="rounded-lg bg-gray-900 px-6 py-2.5 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
         >
           Play again
         </button>
         <button
           onClick={onEndSession}
-          className="rounded-lg border-2 border-gray-300 px-6 py-2 font-medium hover:border-gray-400 dark:border-gray-700"
+          className="rounded-lg border-2 border-gray-300 px-6 py-2.5 font-medium hover:border-gray-400 dark:border-gray-700"
         >
           End session
         </button>

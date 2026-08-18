@@ -106,30 +106,30 @@ function App() {
 
   return (
     <div className="mx-auto flex min-h-svh max-w-xl flex-col items-center gap-6 px-4 py-10">
-      <header className="flex w-full items-center justify-between">
-        <h1 className="text-2xl font-semibold">Flag Flagger</h1>
-        <div className="flex items-center gap-4">
+      <header className="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h1 className="whitespace-nowrap text-xl font-semibold sm:text-2xl">Flag Flagger</h1>
+        <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
           <button
             onClick={() => (session.active ? endSession() : startSession())}
-            className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+            className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
           >
-            {session.active ? 'End session' : 'Start 10-flag session'}
+            {session.active ? 'End session' : 'Start session'}
           </button>
           <button
             onClick={toggleSelectionMode}
-            className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+            className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
           >
             {selectionMode === 'adaptive' ? 'Practice weak flags' : 'Back to normal practice'}
           </button>
           <button
             onClick={() => setView(view === 'quiz' ? 'progress' : 'quiz')}
-            className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+            className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
           >
             {view === 'quiz' ? 'View progress' : 'Back to quiz'}
           </button>
           <button
             onClick={reset}
-            className="text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
+            className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
           >
             Reset stats
           </button>
@@ -266,7 +266,7 @@ function App() {
               {!choice && (
                 <button
                   type="submit"
-                  className="rounded-lg bg-gray-900 px-6 py-2 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
+                  className="rounded-lg bg-gray-900 px-6 py-2.5 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
                 >
                   Submit
                 </button>
@@ -279,7 +279,7 @@ function App() {
               <button
                 onClick={() => handleNext()}
                 autoFocus
-                className="rounded-lg bg-gray-900 px-6 py-2 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
+                className="rounded-lg bg-gray-900 px-6 py-2.5 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
               >
                 {session.isComplete ? 'See summary' : 'Next flag →'}
               </button>
@@ -312,7 +312,7 @@ function ModeButton({
   return (
     <button
       onClick={onClick}
-      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+      className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
         active
           ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
           : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
