@@ -81,6 +81,33 @@ test('reset stats zeroes the counters', async ({ page }) => {
   await expect(page.getByText('Answered').locator('..')).toContainText('0')
 })
 
+test('sound is off by default and only plays feedback once enabled', async ({ page }) => {
+  await page.evaluate(() => {
+    const win = window as unknown as { __oscillatorCount: number }
+    win.__oscillatorCount = 0
+    const original = AudioContext.prototype.createOscillator
+    AudioContext.prototype.createOscillator = function (
+      ...args: Parameters<typeof original>
+    ): ReturnType<typeof original> {
+      win.__oscillatorCount += 1
+      return original.apply(this, args)
+    }
+  })
+  const oscillatorCount = () =>
+    page.evaluate(() => (window as unknown as { __oscillatorCount: number }).__oscillatorCount)
+
+  await expect(page.getByRole('button', { name: 'Sound: Off' })).toBeVisible()
+  await page.locator('div.grid > button').first().click()
+  expect(await oscillatorCount()).toBe(0)
+
+  await page.getByRole('button', { name: 'Next flag →' }).click()
+  await page.getByRole('button', { name: 'Sound: Off' }).click()
+  await expect(page.getByRole('button', { name: 'Sound: On' })).toBeVisible()
+
+  await page.locator('div.grid > button').first().click()
+  expect(await oscillatorCount()).toBeGreaterThan(0)
+})
+
 test('configures and completes a 10-flag session and shows a summary', async ({ page }) => {
   await page.getByRole('button', { name: 'Start session' }).click()
   await expect(page.getByRole('heading', { name: 'Start a session' })).toBeVisible()
