@@ -21,5 +21,20 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
-      - run: npx --no-install playwright install --with-deps chromium
+
+      - name: Get installed Playwright version
+        id: playwright-version
+        run: echo "version=$(npx --no-install playwright --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      # System deps (fonts, libs) always need installing since each run gets
+      # a fresh VM, but the cache above lets this skip re-downloading the
+      # ~150MB Chromium binary itself when the version hasn't changed.
+      - run: npx --no-install playwright install-deps chromium
+      - run: npx --no-install playwright install chromium
       - run: npm run test:e2e
