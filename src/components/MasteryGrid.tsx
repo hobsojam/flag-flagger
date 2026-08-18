@@ -3,8 +3,8 @@ import { createRecord, effectiveConfidence, type ProgressMap } from '../domain/p
 import { Flag } from './Flag'
 
 interface MasteryGridProps {
-  progress: ProgressMap
-  pool: Country[]
+  readonly progress: ProgressMap
+  readonly pool: Country[]
 }
 
 function tierClass(seen: number, confidence: number): string {

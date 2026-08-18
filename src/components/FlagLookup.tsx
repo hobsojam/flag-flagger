@@ -6,7 +6,7 @@ import { Flag } from './Flag'
 type SummaryState = 'loading' | 'error' | FlagSummary
 
 interface FlagLookupProps {
-  pool: Country[]
+  readonly pool: Country[]
 }
 
 export function FlagLookup({ pool }: FlagLookupProps) {

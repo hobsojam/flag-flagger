@@ -11,10 +11,10 @@ export interface SessionConfig {
 }
 
 interface SessionSetupProps {
-  pool: Country[]
-  defaultConfig: SessionConfig
-  onStart: (config: SessionConfig) => void
-  onCancel: () => void
+  readonly pool: Country[]
+  readonly defaultConfig: SessionConfig
+  readonly onStart: (config: SessionConfig) => void
+  readonly onCancel: () => void
 }
 
 const LENGTH_OPTIONS = [5, 10, 15, 20, 30]

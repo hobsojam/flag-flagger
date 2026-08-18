@@ -30,7 +30,14 @@ function loadPreferences(): FlagCategoryPreferences {
 }
 
 function savePreferences(prefs: FlagCategoryPreferences) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs))
+  // Explicitly coerced to booleans (rather than writing `prefs` through
+  // directly) so only known-clean true/false values ever reach storage,
+  // regardless of what shape upstream state happened to carry.
+  const sanitized: FlagCategoryPreferences = {
+    includeHistorical: prefs.includeHistorical === true,
+    includeSensitive: prefs.includeHistorical === true && prefs.includeSensitive === true,
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized))
 }
 
 export function useFlagCategoryPreferences() {

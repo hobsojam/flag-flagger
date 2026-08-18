@@ -26,14 +26,23 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const OUT_DIR = path.resolve(__dirname, '../public/historical-flags')
 const USER_AGENT = 'flag-flagger-research/1.0 (https://github.com/hobsojam/flag-flagger)'
+// Matches the lowercase-letters(-digits) convention every existing
+// historical `code` follows — also rules out path separators / traversal
+// segments, since `code` feeds directly into a filesystem path below.
+const CODE_PATTERN = /^[a-z][a-z0-9]*$/
 
 const [, , title, code] = process.argv
 if (!title || !code) {
   console.error('Usage: node scripts/fetch-historical-flags.mjs "<exact Commons File: title>" <code>')
   process.exit(1)
 }
+if (!CODE_PATTERN.test(code)) {
+  console.error(`Invalid code "${code}" — must be lowercase letters/digits only (e.g. "su", "css").`)
+  process.exit(1)
+}
 
-const apiUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(`File:${title}`)}&prop=imageinfo&iiprop=url|extmetadata|size&format=json`
+const fileTitle = `File:${title}`
+const apiUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(fileTitle)}&prop=imageinfo&iiprop=url|extmetadata|size&format=json`
 const apiRes = await fetch(apiUrl, { headers: { 'User-Agent': USER_AGENT } })
 const apiData = await apiRes.json()
 const page = Object.values(apiData.query.pages)[0]
@@ -51,9 +60,16 @@ console.log('Dimensions:', `${info.width} x ${info.height}`)
 const svgRes = await fetch(info.url, { headers: { 'User-Agent': USER_AGENT } })
 const svgBody = await svgRes.text()
 const outPath = path.join(OUT_DIR, `${code}.svg`)
+// Defense in depth alongside CODE_PATTERN above: refuse to write outside
+// OUT_DIR even if some future change loosens that pattern.
+if (path.relative(OUT_DIR, outPath).startsWith('..')) {
+  console.error(`Refusing to write outside ${OUT_DIR}: ${outPath}`)
+  process.exit(1)
+}
 writeFileSync(outPath, svgBody)
 console.log('Saved:', outPath)
 
+const flagName = page.title.replace(/^File:Flag of (the )?/, '').replace(/\.svg$/, '')
 console.log(`
 Paste into src/data/historicalFlags.ts and fill in the judgment-call fields
 (continent/colorCount/layout/tags/areaKm2/aliases/sensitive):
@@ -61,7 +77,7 @@ Paste into src/data/historicalFlags.ts and fill in the judgment-call fields
   id: 'historical:${code}',
   category: 'historical',
   code: '${code}',
-  name: '${page.title.replace(/^File:Flag of (the )?/, '').replace(/\.svg$/, '')}',
+  name: '${flagName}',
   continent: 'TODO',
   colorCount: 0, // TODO
   layout: 'TODO', // horizontal-stripes | vertical-stripes | diagonal | cross | canton | central-emblem | other

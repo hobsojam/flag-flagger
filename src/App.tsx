@@ -374,7 +374,7 @@ function App() {
               type="checkbox"
               checked={includeHistorical}
               onChange={(e) => setIncludeHistorical(e.target.checked)}
-            />
+            />{' '}
             Include historical flags
           </label>
           {includeHistorical && (
@@ -383,7 +383,7 @@ function App() {
                 type="checkbox"
                 checked={includeSensitive}
                 onChange={(e) => setIncludeSensitive(e.target.checked)}
-              />
+              />{' '}
               Include sensitive historical flags
             </label>
           )}
