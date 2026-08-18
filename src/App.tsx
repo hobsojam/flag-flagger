@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Flag } from './components/Flag'
 import { MasteryGrid } from './components/MasteryGrid'
 import { SessionSummary } from './components/SessionSummary'
@@ -8,6 +8,7 @@ import { useProgress, type SelectionMode } from './hooks/useProgress'
 import { SESSION_LENGTH, useSession } from './hooks/useSession'
 import { useStats } from './hooks/useStats'
 import { isCorrectGuess } from './lib/match'
+import { prefetchFlagAssets } from './lib/prefetchFlags'
 import { buildQuestion, type Question } from './lib/quiz'
 
 type Choice = { code: string; isCorrect: boolean } | null
@@ -32,6 +33,14 @@ function App() {
 
   const accuracy =
     stats.answered === 0 ? 0 : Math.round((stats.correct / stats.answered) * 100)
+
+  useEffect(() => {
+    // Runs once, off the critical path — warms the cache for flags not
+    // inlined into the CSS bundle so they're less likely to show blank
+    // the first time the quiz picks one.
+    const schedule = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 200))
+    schedule(prefetchFlagAssets)
+  }, [])
 
   function handleAnswer(code: string) {
     if (choice) return // already answered this question
