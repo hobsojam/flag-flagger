@@ -192,7 +192,9 @@ function App() {
 
         {showMultipleChoice ? (
           <div
-            className={`grid w-full grid-cols-1 gap-3 sm:grid-cols-2 ${renderMode === 'name-to-flag' ? 'items-start' : ''}`}
+            className={`grid w-full gap-3 ${
+              renderMode === 'name-to-flag' ? 'grid-cols-2 items-start' : 'grid-cols-1 sm:grid-cols-2'
+            }`}
           >
             {question.options.map((option) => {
               const isSelected = choice?.code === option.code
