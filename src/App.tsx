@@ -120,6 +120,121 @@ function App() {
       : `Incorrect. The correct answer is ${question.answer.name}.`
     : ''
 
+  function renderMainView() {
+    if (view === 'progress') return <MasteryGrid progress={progress} />
+    if (view === 'lookup') return <FlagLookup />
+    if (showSummary) {
+      return (
+        <SessionSummary
+          summary={summarizeSession(session.answers, countries)}
+          onPlayAgain={startSession}
+          onEndSession={endSession}
+        />
+      )
+    }
+
+    return (
+      <>
+        <p role="status" aria-live="polite" className="sr-only">
+          {feedback}
+        </p>
+
+        {renderMode === 'flag-to-name' ? (
+          <div className="w-full">
+            <Flag code={question.answer.code} label="Which country is this?" />
+          </div>
+        ) : (
+          <p className="text-3xl font-semibold">{question.answer.name}</p>
+        )}
+
+        {showMultipleChoice ? (
+          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+            {question.options.map((option) => {
+              const isSelected = choice?.code === option.code
+              const isAnswer = choice && option.code === question.answer.code
+
+              let style =
+                'border-gray-300 bg-white hover:border-gray-400 dark:bg-gray-900 dark:border-gray-700'
+              if (choice) {
+                if (isAnswer) {
+                  style = 'border-green-500 bg-green-50 dark:bg-green-950'
+                } else if (isSelected) {
+                  style = 'border-red-500 bg-red-50 dark:bg-red-950'
+                } else {
+                  style = 'border-gray-200 opacity-60 dark:border-gray-800'
+                }
+              }
+
+              return (
+                <button
+                  key={option.code}
+                  onClick={() => handleAnswer(option.code)}
+                  disabled={!!choice}
+                  className={`rounded-lg border-2 transition-colors ${style}`}
+                >
+                  {renderMode === 'flag-to-name' ? (
+                    <span className="block px-4 py-3 text-left font-medium">{option.name}</span>
+                  ) : (
+                    <div className="p-2">
+                      <Flag code={option.code} label={option.name} />
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <form onSubmit={handleGuessSubmit} className="flex w-full flex-col gap-3">
+            <label htmlFor="typed-answer" className="sr-only">
+              Country name
+            </label>
+            <input
+              id="typed-answer"
+              type="text"
+              value={guess}
+              onChange={(e) => setGuess(e.target.value)}
+              disabled={!!choice}
+              autoFocus
+              placeholder="Type the country name..."
+              className={`w-full rounded-lg border-2 px-4 py-3 font-medium transition-colors focus:outline-none ${
+                choice
+                  ? choice.isCorrect
+                    ? 'border-green-500 bg-green-50 dark:bg-green-950'
+                    : 'border-red-500 bg-red-50 dark:bg-red-950'
+                  : 'border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700'
+              }`}
+            />
+            {choice && !choice.isCorrect && (
+              <p className="text-sm text-gray-500">
+                Correct answer: <span className="font-medium">{question.answer.name}</span>
+              </p>
+            )}
+            {!choice && (
+              <button
+                type="submit"
+                className="rounded-lg bg-gray-900 px-6 py-2.5 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
+              >
+                Submit
+              </button>
+            )}
+          </form>
+        )}
+
+        <div className="h-10">
+          {choice && (
+            <button
+              onClick={() => handleNext()}
+              autoFocus
+              className="rounded-lg bg-gray-900 px-6 py-2.5 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
+            >
+              {session.isComplete ? 'See summary' : 'Next flag →'}
+            </button>
+          )}
+        </div>
+      </>
+    )
+  }
+
   return (
     <div className="mx-auto flex min-h-svh max-w-xl flex-col items-center gap-6 px-4 py-10">
       <header className="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2">
@@ -140,12 +255,14 @@ function App() {
           {view === 'quiz' ? (
             <>
               <button
+                type="button"
                 onClick={() => setView('progress')}
                 className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
               >
                 View progress
               </button>
               <button
+                type="button"
                 onClick={() => setView('lookup')}
                 className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
               >
@@ -154,6 +271,7 @@ function App() {
             </>
           ) : (
             <button
+              type="button"
               onClick={() => setView('quiz')}
               className="rounded px-1 py-1.5 text-sm text-gray-500 underline decoration-dotted hover:text-gray-800"
             >
@@ -221,116 +339,7 @@ function App() {
           <Stat label="Best" value={stats.bestStreak} />
         </dl>
 
-        {view === 'progress' ? (
-          <MasteryGrid progress={progress} />
-        ) : view === 'lookup' ? (
-          <FlagLookup />
-        ) : showSummary ? (
-          <SessionSummary
-            summary={summarizeSession(session.answers, countries)}
-            onPlayAgain={startSession}
-            onEndSession={endSession}
-          />
-        ) : (
-          <>
-            <p role="status" aria-live="polite" className="sr-only">
-              {feedback}
-            </p>
-
-            {renderMode === 'flag-to-name' ? (
-              <div className="w-full">
-                <Flag code={question.answer.code} label="Which country is this?" />
-              </div>
-            ) : (
-              <p className="text-3xl font-semibold">{question.answer.name}</p>
-            )}
-
-            {showMultipleChoice ? (
-              <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
-                {question.options.map((option) => {
-                  const isSelected = choice?.code === option.code
-                  const isAnswer = choice && option.code === question.answer.code
-
-                  let style =
-                    'border-gray-300 bg-white hover:border-gray-400 dark:bg-gray-900 dark:border-gray-700'
-                  if (choice) {
-                    if (isAnswer) {
-                      style = 'border-green-500 bg-green-50 dark:bg-green-950'
-                    } else if (isSelected) {
-                      style = 'border-red-500 bg-red-50 dark:bg-red-950'
-                    } else {
-                      style = 'border-gray-200 opacity-60 dark:border-gray-800'
-                    }
-                  }
-
-                  return (
-                    <button
-                      key={option.code}
-                      onClick={() => handleAnswer(option.code)}
-                      disabled={!!choice}
-                      className={`rounded-lg border-2 transition-colors ${style}`}
-                    >
-                      {renderMode === 'flag-to-name' ? (
-                        <span className="block px-4 py-3 text-left font-medium">{option.name}</span>
-                      ) : (
-                        <div className="p-2">
-                          <Flag code={option.code} label={option.name} />
-                        </div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            ) : (
-              <form onSubmit={handleGuessSubmit} className="flex w-full flex-col gap-3">
-                <label htmlFor="typed-answer" className="sr-only">
-                  Country name
-                </label>
-                <input
-                  id="typed-answer"
-                  type="text"
-                  value={guess}
-                  onChange={(e) => setGuess(e.target.value)}
-                  disabled={!!choice}
-                  autoFocus
-                  placeholder="Type the country name..."
-                  className={`w-full rounded-lg border-2 px-4 py-3 font-medium transition-colors focus:outline-none ${
-                    choice
-                      ? choice.isCorrect
-                        ? 'border-green-500 bg-green-50 dark:bg-green-950'
-                        : 'border-red-500 bg-red-50 dark:bg-red-950'
-                      : 'border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700'
-                  }`}
-                />
-                {choice && !choice.isCorrect && (
-                  <p className="text-sm text-gray-500">
-                    Correct answer: <span className="font-medium">{question.answer.name}</span>
-                  </p>
-                )}
-                {!choice && (
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-gray-900 px-6 py-2.5 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
-                  >
-                    Submit
-                  </button>
-                )}
-              </form>
-            )}
-
-            <div className="h-10">
-              {choice && (
-                <button
-                  onClick={() => handleNext()}
-                  autoFocus
-                  className="rounded-lg bg-gray-900 px-6 py-2.5 font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900"
-                >
-                  {session.isComplete ? 'See summary' : 'Next flag →'}
-                </button>
-              )}
-            </div>
-          </>
-        )}
+        {renderMainView()}
       </main>
     </div>
   )

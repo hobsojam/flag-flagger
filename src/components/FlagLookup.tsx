@@ -25,6 +25,7 @@ export function FlagLookup() {
     return (
       <div className="flex w-full flex-col items-center gap-4">
         <button
+          type="button"
           onClick={() => {
             setSelected(null)
             setSummary(null)
@@ -92,6 +93,7 @@ export function FlagLookup() {
         {filtered.map((country) => (
           <button
             key={country.id}
+            type="button"
             onClick={() => selectCountry(country)}
             className="flex flex-col items-center gap-1 rounded-lg border-2 border-gray-200 p-2 text-center hover:border-gray-400 dark:border-gray-800"
           >

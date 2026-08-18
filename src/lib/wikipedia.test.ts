@@ -75,4 +75,11 @@ describe('fetchFlagSummary', () => {
     expect(first).toEqual(second)
     expect(fetch).toHaveBeenCalledTimes(1)
   })
+
+  it('rejects names with characters outside the expected set without making a request', async () => {
+    const result = await fetchFlagSummary('<script>alert(1)</script>')
+
+    expect(result).toBeNull()
+    expect(fetch).not.toHaveBeenCalled()
+  })
 })
