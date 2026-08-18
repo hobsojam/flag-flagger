@@ -81,6 +81,35 @@ test('reset stats zeroes the counters', async ({ page }) => {
   await expect(page.getByText('Answered').locator('..')).toContainText('0')
 })
 
+test('shows no day-streak badge until the first answer, then persists it', async ({ page }) => {
+  await expect(page.getByText(/day streak/)).not.toBeVisible()
+
+  await page.locator('div.grid > button').first().click()
+  await expect(page.getByText('1-day streak')).toBeVisible()
+
+  await page.reload()
+  await expect(page.getByText('1-day streak')).toBeVisible()
+})
+
+test('day streak increments when practicing again the day after', async ({ page }) => {
+  await page.evaluate(() => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const y = yesterday.getFullYear()
+    const m = String(yesterday.getMonth() + 1).padStart(2, '0')
+    const d = String(yesterday.getDate()).padStart(2, '0')
+    localStorage.setItem(
+      'flag-flagger:streak',
+      JSON.stringify({ lastPracticedDate: `${y}-${m}-${d}`, currentStreak: 4, longestStreak: 4 }),
+    )
+  })
+  await page.reload()
+  await expect(page.getByText('4-day streak')).toBeVisible()
+
+  await page.locator('div.grid > button').first().click()
+  await expect(page.getByText('5-day streak')).toBeVisible()
+})
+
 test('sound is off by default and only plays feedback once enabled', async ({ page }) => {
   await page.evaluate(() => {
     const win = window as unknown as { __oscillatorCount: number }
