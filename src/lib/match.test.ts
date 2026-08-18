@@ -4,6 +4,8 @@ import { isCorrectGuess } from './match'
 
 function makeCountry(name: string, aliases?: string[]): Country {
   return {
+    id: 'country:xx',
+    category: 'country',
     code: 'xx',
     name,
     continent: 'Europe',
