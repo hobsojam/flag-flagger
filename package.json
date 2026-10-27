@@ -14,7 +14,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "flag-icons": "^7.5.0",
+    "flag-icons": "^7.6.0",
     "react": "^19.2.8",
     "react-dom": "^19.3.0"
   },
